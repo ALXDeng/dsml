@@ -1,0 +1,204 @@
+syntax = "proto3";
+
+package gpu_sim;
+
+message DeviceId {
+  uint64 value = 1;
+}
+
+message Rank {
+  uint32 value = 1;
+}
+
+message MemAddr {
+  uint64 value = 1;
+}
+
+message StreamId {
+  uint64 value = 1;
+}
+
+message DeviceMetadata {
+  DeviceId deviceId = 1;
+  MemAddr minMemAddr = 2;
+  MemAddr maxMemAddr = 3;
+}
+
+// A service that simulates a single GPU device
+service GPUDevice {
+  rpc GetDeviceMetadata(GetDeviceMetadataRequest) returns (GetDeviceMetadataResponse) {}
+
+  // Called by the GPUCoordinator to start the data transfer between two devices.
+  // Begin.*() functions are "non-blocking", meaning they return immediately after initiating the operation.
+  // The actual data transfer should happen in the background initiated by the devices.
+  rpc BeginSend(BeginSendRequest) returns (BeginSendResponse) {}
+  rpc BeginReceive(BeginReceiveRequest) returns (BeginReceiveResponse) {}
+
+  // Called by the src device to send data to the dst device.
+  rpc StreamSend(stream DataChunk) returns (StreamSendResponse) {}
+
+  // For the coordinator to know if a stream has completed.
+  rpc GetStreamStatus(GetStreamStatusRequest) returns (GetStreamStatusResponse) {}
+}
+
+message GetDeviceMetadataRequest {
+}
+
+message GetDeviceMetadataResponse {
+  DeviceMetadata metadata = 1;
+}
+
+message BeginSendRequest {
+  MemAddr sendBuffAddr = 1;
+  uint64 numBytes = 2;
+  Rank dstRank = 3;
+}
+
+message BeginSendResponse {
+  bool initiated = 1;
+  StreamId streamId = 2;
+}
+
+message BeginReceiveRequest {
+  StreamId streamId = 1;
+  MemAddr recvBuffAddr = 2;
+  uint64 numBytes = 3;
+  Rank srcRank = 4;
+}
+
+message BeginReceiveResponse {
+  bool initiated = 1;
+}
+
+message DataChunk {
+  bytes data = 1;
+  // You may add more fields here
+}
+
+message StreamSendResponse {
+  bool success = 1;
+}
+
+message GetStreamStatusRequest {
+  StreamId streamId = 1;
+}
+
+enum Status {
+  IN_PROGRESS = 0;
+  SUCCESS = 1;
+  FAILED = 2;
+}
+
+message GetStreamStatusResponse {
+  Status status = 1;
+}
+
+// A service that simulates a coordinator that manages multiple GPU devices
+service GPUCoordinator {
+  rpc CommInit(CommInitRequest) returns (CommInitResponse) {}
+  rpc GetCommStatus(GetCommStatusRequest) returns (GetCommStatusResponse) {}
+  // You may choose to implement CommFinalize and CommDestroy RPCs
+
+  // Group operations wrapper
+  rpc GroupStart(GroupStartRequest) returns (GroupStartResponse) {}
+  rpc GroupEnd(GroupEndRequest) returns (GroupEndResponse) {}
+
+  // RPCs for group or peer-to-peer communication
+  rpc AllReduceRing(AllReduceRingRequest) returns (AllReduceRingResponse) {}
+
+  // Host-to-device data transfer and vice versa
+  // You may implement this as streaming as well
+  rpc Memcpy(MemcpyRequest) returns (MemcpyResponse) {}
+}
+
+// Create a new communicator with a number of GPUs
+message CommInitRequest {
+  uint32 numDevices = 1;
+}
+
+message CommInitResponse {
+  bool success = 1;
+  // If successful, the response will contain a unique communicator ID.
+  uint64 commId = 2;
+  repeated DeviceMetadata devices = 3;
+  // Add more metadata here if needed
+}
+
+message GetCommStatusRequest {
+  uint64 commId = 1;
+}
+
+message GetCommStatusResponse {
+  Status status = 1;
+}
+
+// Group operation messages
+message GroupStartRequest {
+  uint64 commId = 1;
+}
+
+message GroupStartResponse {
+  bool success = 1;
+}
+
+message GroupEndRequest {
+  uint64 commId = 1;
+}
+
+message GroupEndResponse {
+  bool success = 1;
+}
+
+enum ReduceOp {
+  SUM = 0;
+  PROD = 1;
+  MIN = 2;
+  MAX = 3;
+  // AVG = 4;
+}
+
+message AllReduceRingRequest {
+  uint64 commId = 1;
+  uint64 count = 2;
+  ReduceOp op = 3;
+  // Rank -> MemAddr; protobuf doesn't support message type keys or type aliases
+  map<uint32, MemAddr> memAddrs = 4;
+}
+
+message AllReduceRingResponse {
+  bool success = 1;
+}
+
+// "CPU" -> "GPU", i.e., GPUCoordinator -> GPUDevice
+message MemcpyHostToDeviceRequest {
+  bytes hostSrcData = 1;
+  DeviceId dstDeviceId = 2;
+  MemAddr dstMemAddr = 3;
+}
+message MemcpyHostToDeviceResponse {
+  bool success = 1;
+}
+
+// "GPU" -> "CPU", i.e., GPUDevice -> GPUCoordinator
+message MemcpyDeviceToHostRequest {
+  DeviceId srcDeviceId = 1;
+  MemAddr srcMemAddr = 2;
+  uint64 numBytes = 3;
+}
+message MemcpyDeviceToHostResponse {
+  bytes dstData = 1;
+}
+
+message MemcpyRequest {
+  oneof either {
+    MemcpyHostToDeviceRequest hostToDevice = 1;
+    MemcpyDeviceToHostRequest deviceToHost = 2;
+  }
+}
+message MemcpyResponse {
+  oneof either {
+    MemcpyHostToDeviceResponse hostToDevice = 1;
+    MemcpyDeviceToHostResponse deviceToHost = 2;
+  }
+}
+
