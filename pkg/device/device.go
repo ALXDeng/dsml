@@ -44,6 +44,7 @@ type GPUDevice struct {
 func (d *GPUDevice) SetAllGatherPhase(enabled bool) {
     d.memLock.Lock()
     d.IsAllGather = enabled
+    log.Printf("Device %d phase changed: isAllGather=%v", d.Rank, enabled)
     d.memLock.Unlock()
 }
 

@@ -199,10 +199,7 @@ func (c *GPUCoordinator) AllReduceRing(ctx context.Context, req *pb.AllReduceRin
         return nil, fmt.Errorf("communicator not found")
     }
 
-    // Set initial status
-    comm.status = pb.Status_IN_PROGRESS
-
-    // Set all devices to scatter-reduce phase
+    // Reset all devices to scatter-reduce phase
     for _, device := range c.Devices {
         device.SetAllGatherPhase(false)
     }
@@ -213,10 +210,17 @@ func (c *GPUCoordinator) AllReduceRing(ctx context.Context, req *pb.AllReduceRin
         return nil, fmt.Errorf("scatter-reduce failed: %v", err)
     }
 
+    // Wait for all operations to complete
+    time.Sleep(10 * time.Millisecond)
+
     // Set all devices to all-gather phase
     for _, device := range c.Devices {
         device.SetAllGatherPhase(true)
+        log.Printf("Setting device %d to all-gather phase", device.Rank)
     }
+
+    // Wait for phase change to propagate
+    time.Sleep(10 * time.Millisecond)
 
     // Execute all-gather phase
     if err := c.allGatherPhase(ctx, comm, req); err != nil {
@@ -224,12 +228,7 @@ func (c *GPUCoordinator) AllReduceRing(ctx context.Context, req *pb.AllReduceRin
         return nil, fmt.Errorf("all-gather failed: %v", err)
     }
 
-    // Set final status
-    comm.status = pb.Status_SUCCESS
-
-    return &pb.AllReduceRingResponse{
-        Success: true,
-    }, nil
+    return &pb.AllReduceRingResponse{Success: true}, nil
 }
 
 // scatterReducePhase implements the scatter-reduce phase of ring-allreduce
@@ -909,14 +908,14 @@ func (c *GPUCoordinator) allGatherPhase3(ctx context.Context, comm *Communicator
     return nil
 }
 
-func (c *GPUCoordinator) allGatherPhase(ctx context.Context, comm *Communicator, req *pb.AllReduceRingRequest) error {
+func (c *GPUCoordinator) allGatherPhase_close(ctx context.Context, comm *Communicator, req *pb.AllReduceRingRequest) error {
     numDevices := len(comm.devices)
     chunkSize := req.Count / uint64(numDevices)
     
     log.Printf("Starting all-gather phase with %d devices", numDevices)
     
-    // After scatter-reduce, for device i:
-    // - The final reduced chunk (i-1) is at offset (i-1)*chunkSize
+    // At this point, each device i has the final reduced result for chunk i
+    // Need to distribute these chunks to all devices
     for step := 0; step < numDevices-1; step++ {
         log.Printf("All-gather step %d/%d", step+1, numDevices-1)
         
@@ -924,15 +923,17 @@ func (c *GPUCoordinator) allGatherPhase(ctx context.Context, comm *Communicator,
             sendRank := rank
             recvRank := (rank + 1) % numDevices
             
-            // Calculate which chunk this device has fully reduced
-            // Device i has the final reduced value for chunk (i-1)
-            reducedChunkIndex := (rank - 1 + numDevices) % numDevices
-            offset := uint64(reducedChunkIndex) * chunkSize
+            // In all-gather:
+            // Step 0: Device i sends its reduced chunk (i) to device i+1
+            // Step 1: Device i sends the chunk it received in previous step
+            // Calculate which chunk to send
+            chunkIndex := (rank - step + numDevices) % numDevices
+            offset := uint64(chunkIndex) * chunkSize
             
-            log.Printf("Step %d: Device %d sending its reduced chunk %d to device %d at offset %d", 
-                step, sendRank, reducedChunkIndex, recvRank, offset)
+            log.Printf("Step %d: Device %d sending chunk %d (reduced sum) to device %d at offset %d", 
+                step, sendRank, chunkIndex, recvRank, offset)
             
-            // Begin send from where the reduced value is
+            // Begin send
             sendResp, err := comm.devices[sendRank].BeginSend(ctx, &pb.BeginSendRequest{
                 SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(sendRank)].Value + offset},
                 NumBytes:    chunkSize,
@@ -942,7 +943,7 @@ func (c *GPUCoordinator) allGatherPhase(ctx context.Context, comm *Communicator,
                 return fmt.Errorf("all-gather send failed at step %d, rank %d: %v", step, sendRank, err)
             }
             
-            // Write to the same chunk position in destination
+            // Begin receive - write to same chunk position as source
             _, err = comm.devices[recvRank].BeginReceive(ctx, &pb.BeginReceiveRequest{
                 StreamId:     sendResp.StreamId,
                 RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(recvRank)].Value + offset},
@@ -972,6 +973,93 @@ func (c *GPUCoordinator) allGatherPhase(ctx context.Context, comm *Communicator,
     }
     
     return nil
+}
+
+func (c *GPUCoordinator) allGatherPhase(ctx context.Context, comm *Communicator, req *pb.AllReduceRingRequest) error {
+    numDevices := len(comm.devices)
+    chunkSize := req.Count / uint64(numDevices)
+    
+    log.Printf("Starting all-gather phase with %d devices", numDevices)
+    
+    // Track which chunks each device has
+    deviceChunks := make(map[int][]int)
+    for i := 0; i < numDevices; i++ {
+        // Initially device i has its reduced chunk at ((i+1) % N)
+        deviceChunks[i] = []int{(i + 1) % numDevices}
+        log.Printf("Device %d starts with reduced chunk %v", i, deviceChunks[i])
+    }
+    
+    // All-gather phase: each device needs to get all chunks
+    for step := 0; step < numDevices-1; step++ {
+        log.Printf("All-gather step %d/%d", step+1, numDevices-1)
+        
+        for rank := 0; rank < numDevices; rank++ {
+            sendRank := rank
+            recvRank := (rank + 1) % numDevices
+            
+            // Send each chunk this device has
+            for _, chunkId := range deviceChunks[sendRank] {
+                offset := uint64(chunkId) * chunkSize
+                
+                log.Printf("Step %d: Device %d sending chunk %d (offset %d) to device %d", 
+                    step, sendRank, chunkId, offset, recvRank)
+                
+                sendResp, err := comm.devices[sendRank].BeginSend(ctx, &pb.BeginSendRequest{
+                    SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(sendRank)].Value + offset},
+                    NumBytes:    chunkSize,
+                    DstRank:    &pb.Rank{Value: uint32(recvRank)},
+                })
+                if err != nil {
+                    return fmt.Errorf("send failed: %v", err)
+                }
+                
+                _, err = comm.devices[recvRank].BeginReceive(ctx, &pb.BeginReceiveRequest{
+                    StreamId:     sendResp.StreamId,
+                    RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(recvRank)].Value + offset},
+                    NumBytes:    chunkSize,
+                    SrcRank:     &pb.Rank{Value: uint32(sendRank)},
+                })
+                if err != nil {
+                    return fmt.Errorf("receive failed: %v", err)
+                }
+                
+                // Wait for completion
+                for {
+                    statusResp, err := comm.devices[recvRank].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
+                        StreamId: sendResp.StreamId,
+                    })
+                    if err != nil {
+                        return fmt.Errorf("status check failed: %v", err)
+                    }
+                    if statusResp.Status != pb.Status_IN_PROGRESS {
+                        break
+                    }
+                    time.Sleep(time.Millisecond)
+                }
+                
+                // Update receiver's chunks
+                if !contains(deviceChunks[recvRank], chunkId) {
+                    deviceChunks[recvRank] = append(deviceChunks[recvRank], chunkId)
+                }
+            }
+        }
+        
+        // Debug: print chunk distribution
+        for i := 0; i < numDevices; i++ {
+            log.Printf("After step %d: Device %d has chunks %v", step, i, deviceChunks[i])
+        }
+    }
+    
+    return nil
+}
+
+func contains(slice []int, val int) bool {
+    for _, item := range slice {
+        if item == val {
+            return true
+        }
+    }
+    return false
 }
 // Memcpy handles memory copy operations between host and device
 // func (c *GPUCoordinator) Memcpy(ctx context.Context, req *pb.MemcpyRequest) (*pb.MemcpyResponse, error) {
