@@ -54,34 +54,39 @@ func (c *GPUCoordinator) NaiveAllReduce(ctx context.Context, req *pb.NaiveAllRed
 
     comm.status = pb.Status_IN_PROGRESS
     numDevices := len(comm.devices)
+    dataSize := req.Count
     
-    log.Printf("Naive AllReduce: Gathering all data to device 0")
+    log.Printf("Naive AllReduce: Gathering all data to device 0 (data size: %d bytes)", dataSize)
     
-    // Device 0 will receive from all other devices
+    // Set all devices to non-allgather phase (for reduction behavior)
+    for _, device := range c.Devices {
+        device.SetAllGatherPhase(false)
+    }
+    
+    // First gather all data to device 0
     for srcRank := 1; srcRank < numDevices; srcRank++ {
         // Begin send from source device
         sendResp, err := comm.devices[srcRank].BeginSend(ctx, &pb.BeginSendRequest{
             SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(srcRank)].Value},
-            NumBytes:    req.Count,
+            NumBytes:    dataSize,
             DstRank:    &pb.Rank{Value: 0},
         })
         if err != nil {
             return nil, fmt.Errorf("gather send failed from rank %d: %v", srcRank, err)
         }
 
-        // Device 0 receives
-        dstAddr := req.MemAddrs[0].Value + uint64(srcRank*8)
+        // Device 0 receives and automatically reduces (adds) to existing values
         _, err = comm.devices[0].BeginReceive(ctx, &pb.BeginReceiveRequest{
             StreamId:     sendResp.StreamId,
-            RecvBuffAddr: &pb.MemAddr{Value: dstAddr},
-            NumBytes:    req.Count,
+            RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[0].Value},  // Same destination address for reduction
+            NumBytes:    dataSize,
             SrcRank:     &pb.Rank{Value: uint32(srcRank)},
         })
         if err != nil {
             return nil, fmt.Errorf("gather receive failed from rank %d: %v", srcRank, err)
         }
 
-        // Wait for transfer to complete
+        // Wait for transfer and reduction to complete
         for {
             statusResp, err := comm.devices[0].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
                 StreamId: sendResp.StreamId,
@@ -94,34 +99,41 @@ func (c *GPUCoordinator) NaiveAllReduce(ctx context.Context, req *pb.NaiveAllRed
             }
             time.Sleep(time.Millisecond)
         }
+        
+        log.Printf("Gathered and reduced data from device %d", srcRank)
     }
 
-    log.Printf("Naive AllReduce: Broadcasting result to all devices")
+    // Switch to broadcast mode (no more reduction needed)
+    for _, device := range c.Devices {
+        device.SetAllGatherPhase(true)
+    }
+
+    log.Printf("Naive AllReduce: Broadcasting reduced result to all devices")
     
-    // Broadcast reduced result from device 0 to all other devices
+    // Broadcast the reduced result from device 0 to all other devices
     for dstRank := 1; dstRank < numDevices; dstRank++ {
         // Begin send from device 0
         sendResp, err := comm.devices[0].BeginSend(ctx, &pb.BeginSendRequest{
             SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[0].Value},
-            NumBytes:    req.Count,
+            NumBytes:    dataSize,
             DstRank:    &pb.Rank{Value: uint32(dstRank)},
         })
         if err != nil {
             return nil, fmt.Errorf("broadcast send failed to rank %d: %v", dstRank, err)
         }
 
-        // Destination device receives
+        // Destination device receives (no reduction, just copy)
         _, err = comm.devices[dstRank].BeginReceive(ctx, &pb.BeginReceiveRequest{
             StreamId:     sendResp.StreamId,
             RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(dstRank)].Value},
-            NumBytes:    req.Count,
+            NumBytes:    dataSize,
             SrcRank:     &pb.Rank{Value: 0},
         })
         if err != nil {
             return nil, fmt.Errorf("broadcast receive failed at rank %d: %v", dstRank, err)
         }
 
-        // Wait for transfer to complete
+        // Wait for broadcast to complete
         for {
             statusResp, err := comm.devices[dstRank].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
                 StreamId: sendResp.StreamId,
@@ -134,6 +146,8 @@ func (c *GPUCoordinator) NaiveAllReduce(ctx context.Context, req *pb.NaiveAllRed
             }
             time.Sleep(time.Millisecond)
         }
+        
+        log.Printf("Broadcast complete to device %d", dstRank)
     }
 
     comm.status = pb.Status_SUCCESS

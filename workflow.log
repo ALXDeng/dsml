@@ -5,53 +5,32 @@
 === RUN   TestGroupOperations
 --- PASS: TestGroupOperations (0.00s)
 === RUN   TestAllReduce
-2024/12/16 21:50:56 Starting all-gather phase with 4 devices
---- PASS: TestAllReduce (0.18s)
+2024/12/16 21:53:41 Starting all-gather phase with 4 devices
+--- PASS: TestAllReduce (0.17s)
 === RUN   TestStatusChecking
 --- PASS: TestStatusChecking (0.03s)
 === RUN   TestMemcpyFromGPU
---- PASS: TestMemcpyFromGPU (0.00s)
+--- PASS: TestMemcpyFromGPU (0.01s)
 === RUN   TestCompleteWorkflow
-2024/12/16 21:50:56 Starting all-gather phase with 4 devices
---- PASS: TestCompleteWorkflow (0.17s)
+2024/12/16 21:53:42 Starting all-gather phase with 4 devices
+--- PASS: TestCompleteWorkflow (0.16s)
 === RUN   TestNaiveAllReduce
     gpu_test.go:920: Initializing device 0 with value 1.000000
     gpu_test.go:920: Initializing device 1 with value 2.000000
     gpu_test.go:920: Initializing device 2 with value 3.000000
     gpu_test.go:920: Initializing device 3 with value 4.000000
-2024/12/16 21:50:56 Naive AllReduce: Gathering all data to device 0
-2024/12/16 21:50:56 Naive AllReduce: Broadcasting result to all devices
-    gpu_test.go:977: Device 0, Result[0] = 1.000000, want 10.000000
-    gpu_test.go:977: Device 0, Result[1] = 3.000000, want 10.000000
-    gpu_test.go:977: Device 0, Result[2] = 6.000000, want 10.000000
+2024/12/16 21:53:42 Naive AllReduce: Gathering all data to device 0 (data size: 64 bytes)
+2024/12/16 21:53:42 Gathered and reduced data from device 1
+2024/12/16 21:53:42 Gathered and reduced data from device 2
+2024/12/16 21:53:42 Gathered and reduced data from device 3
+2024/12/16 21:53:42 Naive AllReduce: Broadcasting reduced result to all devices
+2024/12/16 21:53:42 Broadcast complete to device 1
+2024/12/16 21:53:42 Broadcast complete to device 2
+2024/12/16 21:53:42 Broadcast complete to device 3
     gpu_test.go:981: Device 0 results verified
-    gpu_test.go:977: Device 1, Result[0] = 3.000000, want 10.000000
-    gpu_test.go:977: Device 1, Result[1] = 5.000000, want 10.000000
-    gpu_test.go:977: Device 1, Result[2] = 8.000000, want 10.000000
-    gpu_test.go:977: Device 1, Result[3] = 12.000000, want 10.000000
-    gpu_test.go:977: Device 1, Result[4] = 12.000000, want 10.000000
-    gpu_test.go:977: Device 1, Result[5] = 12.000000, want 10.000000
-    gpu_test.go:977: Device 1, Result[6] = 12.000000, want 10.000000
-    gpu_test.go:977: Device 1, Result[7] = 12.000000, want 10.000000
     gpu_test.go:981: Device 1 results verified
-    gpu_test.go:977: Device 2, Result[0] = 4.000000, want 10.000000
-    gpu_test.go:977: Device 2, Result[1] = 6.000000, want 10.000000
-    gpu_test.go:977: Device 2, Result[2] = 9.000000, want 10.000000
-    gpu_test.go:977: Device 2, Result[3] = 13.000000, want 10.000000
-    gpu_test.go:977: Device 2, Result[4] = 13.000000, want 10.000000
-    gpu_test.go:977: Device 2, Result[5] = 13.000000, want 10.000000
-    gpu_test.go:977: Device 2, Result[6] = 13.000000, want 10.000000
-    gpu_test.go:977: Device 2, Result[7] = 13.000000, want 10.000000
     gpu_test.go:981: Device 2 results verified
-    gpu_test.go:977: Device 3, Result[0] = 5.000000, want 10.000000
-    gpu_test.go:977: Device 3, Result[1] = 7.000000, want 10.000000
-    gpu_test.go:977: Device 3, Result[3] = 14.000000, want 10.000000
-    gpu_test.go:977: Device 3, Result[4] = 14.000000, want 10.000000
-    gpu_test.go:977: Device 3, Result[5] = 14.000000, want 10.000000
-    gpu_test.go:977: Device 3, Result[6] = 14.000000, want 10.000000
-    gpu_test.go:977: Device 3, Result[7] = 14.000000, want 10.000000
     gpu_test.go:981: Device 3 results verified
---- FAIL: TestNaiveAllReduce (0.04s)
-FAIL
-FAIL	dsml/pkg/tests	0.493s
-FAIL
+--- PASS: TestNaiveAllReduce (0.01s)
+PASS
+ok  	dsml/pkg/tests	0.414s
