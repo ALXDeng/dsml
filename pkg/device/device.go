@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"sync"
 
-	pb "github.com/ALXDeng/dsml/proto"
+	pb "dsml/proto/gpu_sim"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
