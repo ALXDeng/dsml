@@ -4,8 +4,9 @@ package coordinator
 import (
 	"context"
 	"fmt"
-	pb "gpu-simulator/proto/gpu_sim"
 	"sync"
+
+	pb "github.com/ALXDeng/dsml/proto/gpu_sim"
 )
 
 type Communicator struct {

@@ -2,12 +2,13 @@
 package main
 
 import (
+	"dsml/pkg/device"
 	"flag"
 	"fmt"
-	"gpu-simulator/pkg/device"
-	pb "gpu-simulator/proto/gpu_sim"
 	"log"
 	"net"
+
+	pb "github.com/ALXDeng/dsml/proto/gpu_sim"
 
 	"google.golang.org/grpc"
 )

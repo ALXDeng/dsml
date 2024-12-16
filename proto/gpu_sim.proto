@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "gpu-simulator/proto/gpu_sim";
+option go_package = "dsml/proto/gpu_sim";
 
 package gpu_sim;
 
