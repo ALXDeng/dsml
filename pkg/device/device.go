@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"math/rand"
 	"sync"
@@ -44,7 +43,7 @@ type GPUDevice struct {
 func (d *GPUDevice) SetAllGatherPhase(enabled bool) {
     d.memLock.Lock()
     d.IsAllGather = enabled
-    log.Printf("Device %d phase changed: isAllGather=%v", d.Rank, enabled)
+    // log.Printf("Device %d phase changed: isAllGather=%v", d.Rank, enabled)
     d.memLock.Unlock()
 }
 
@@ -150,8 +149,8 @@ func (d *GPUDevice) BeginSend(ctx context.Context, req *pb.BeginSendRequest) (*p
     for i := range values {
         values[i] = math.Float64frombits(binary.LittleEndian.Uint64(stream.data[i*8:]))
     }
-    log.Printf("Device %d: Sending chunk - addr=%d, values=%v", 
-        d.Rank, req.SendBuffAddr.Value, values)
+    // log.Printf("Device %d: Sending chunk - addr=%d, values=%v", 
+        // d.Rank, req.SendBuffAddr.Value, values)
     
     globalStreamsMutex.Lock()
     globalStreams[streamId] = stream
@@ -264,8 +263,8 @@ func (d *GPUDevice) BeginReceive(ctx context.Context, req *pb.BeginReceiveReques
     isAllGather := d.IsAllGather
     d.memLock.RUnlock()
 
-    log.Printf("Device %d: Processing at addr=%d, isAllGather=%v incoming=%v existing=%v", 
-        d.Rank, req.RecvBuffAddr.Value, isAllGather, incomingVals, existingVals)
+    // log.Printf("Device %d: Processing at addr=%d, isAllGather=%v incoming=%v existing=%v", 
+        // d.Rank, req.RecvBuffAddr.Value, isAllGather, incomingVals, existingVals)
 
     // Process data based on phase
     resultVals := make([]float64, len(incomingVals))
@@ -291,8 +290,8 @@ func (d *GPUDevice) BeginReceive(ctx context.Context, req *pb.BeginReceiveReques
     copy(d.Memory[req.RecvBuffAddr.Value:], resultData)
     d.memLock.Unlock()
 
-    log.Printf("Device %d: Result values=%v at addr=%d", 
-        d.Rank, resultVals, req.RecvBuffAddr.Value)
+    // log.Printf("Device %d: Result values=%v at addr=%d", 
+        // d.Rank, resultVals, req.RecvBuffAddr.Value)
 
     globalStreamsMutex.Lock()
     stream.status = pb.Status_SUCCESS
@@ -343,14 +342,14 @@ func (d *GPUDevice) BeginReceive1(ctx context.Context, req *pb.BeginReceiveReque
     resultData := make([]byte, req.NumBytes)
     if !d.IsAllGather {
         // We're in scatter-reduce phase, perform reduction
-        log.Printf("Device %d: Reducing values at addr %d", d.Rank, req.RecvBuffAddr.Value)
+        // log.Printf("Device %d: Reducing values at addr %d", d.Rank, req.RecvBuffAddr.Value)
         for i := 0; i < int(numFloats); i++ {
             result := incomingData[i] + existingData[i]
             binary.LittleEndian.PutUint64(resultData[i*8:], math.Float64bits(result))
         }
     } else {
         // We're in all-gather phase, just copy
-        log.Printf("Device %d: Copying values at addr %d", d.Rank, req.RecvBuffAddr.Value)
+        // log.Printf("Device %d: Copying values at addr %d", d.Rank, req.RecvBuffAddr.Value)
         copy(resultData, stream.data)
     }
 
@@ -359,8 +358,8 @@ func (d *GPUDevice) BeginReceive1(ctx context.Context, req *pb.BeginReceiveReque
     copy(d.Memory[req.RecvBuffAddr.Value:], resultData)
     d.memLock.Unlock()
 
-    log.Printf("Device %d: Values - incoming: %v, existing: %v, result: %v",
-        d.Rank, incomingData, existingData, bytesToFloat64s(resultData))
+    // log.Printf("Device %d: Values - incoming: %v, existing: %v, result: %v",
+        // d.Rank, incomingData, existingData, bytesToFloat64s(resultData))
 
     globalStreamsMutex.Lock()
     stream.status = pb.Status_SUCCESS

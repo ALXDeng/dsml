@@ -1,11 +1,21 @@
 //go:generate protoc --go_out=. --go_grpc_out=. proto/gpu_sim/gpu_sim.proto
 syntax = "proto3";
-
+option go_package = "dsml/proto/gpu_sim";
 
 package gpu_sim;
 
 message DeviceId {
   uint64 value = 1;
+}
+message NaiveAllReduceRequest {
+    uint64 comm_id = 1;
+    uint64 count = 2;
+    ReduceOp op = 3;
+    map<uint32, MemAddr> mem_addrs = 4;
+}
+
+message NaiveAllReduceResponse {
+    bool success = 1;
 }
 
 message Rank {
@@ -111,6 +121,7 @@ service GPUCoordinator {
   // Host-to-device data transfer and vice versa
   // You may implement this as streaming as well
   rpc Memcpy(MemcpyRequest) returns (MemcpyResponse) {}
+  rpc NaiveAllReduce(NaiveAllReduceRequest) returns (NaiveAllReduceResponse) {}
 }
 
 // Create a new communicator with a number of GPUs
