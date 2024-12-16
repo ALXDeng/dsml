@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	pb "github.com/ALXDeng/dsml/proto/gpu_sim"
+	pb "github.com/ALXDeng/dsml/proto"
 )
 
 type Communicator struct {

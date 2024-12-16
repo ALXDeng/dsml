@@ -8,7 +8,7 @@ import (
 	"log"
 	"net"
 
-	pb "github.com/ALXDeng/dsml/proto/gpu_sim"
+	pb "github.com/ALXDeng/dsml/proto"
 
 	"google.golang.org/grpc"
 )
