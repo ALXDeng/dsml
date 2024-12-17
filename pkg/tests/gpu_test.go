@@ -783,6 +783,113 @@ func TestStatusChecking(t *testing.T) {
 //     }
 // }
 
+// func TestCompleteWorkflow(t *testing.T) {
+//     client, _, cleanup := setupTest(t)
+//     defer cleanup()
+
+//     ctx := context.Background()
+
+//     // Setup parameters
+//     N := 4          // number of GPUs
+//     vectorSize := 8 // elements per vector - MUST be divisible by number of GPUs
+//     bytesPerFloat := 8
+//     totalBytes := uint64(vectorSize * bytesPerFloat)
+
+//     // Initialize communicator
+//     commInitResp, err := client.CommInit(ctx, &pb.CommInitRequest{NumDevices: uint32(N)})
+//     if err != nil {
+//         t.Fatalf("CommInit failed: %v", err)
+//     }
+
+//     // Create and initialize vectors on each GPU
+//     for deviceRank := 0; deviceRank < N; deviceRank++ {
+//         // Create vector where all elements equal rank+1
+//         data := make([]byte, totalBytes)
+//         value := float64(deviceRank + 1)
+        
+//         // Fill entire vector with this value
+//         for i := 0; i < vectorSize; i++ {
+//             binary.LittleEndian.PutUint64(data[i*8:], math.Float64bits(value))
+//         }
+
+//         // Copy to GPU
+//         _, err := client.Memcpy(ctx, &pb.MemcpyRequest{
+//             Either: &pb.MemcpyRequest_HostToDevice{
+//                 HostToDevice: &pb.MemcpyHostToDeviceRequest{
+//                     HostSrcData: data,
+//                     DstDeviceId: commInitResp.Devices[deviceRank].DeviceId,
+//                     DstMemAddr:  commInitResp.Devices[deviceRank].MinMemAddr,
+//                 },
+//             },
+//         })
+//         if err != nil {
+//             t.Fatalf("Failed to copy data to GPU %d: %v", deviceRank, err)
+//         }
+//     }
+
+//     // Initialize memory addresses map for AllReduce
+//     memAddrs := make(map[uint32]*pb.MemAddr)
+//     for i := uint32(0); i < uint32(N); i++ {
+//         memAddrs[i] = commInitResp.Devices[i].MinMemAddr
+//     }
+
+//     // Start group operation
+//     if _, err := client.GroupStart(ctx, &pb.GroupStartRequest{CommId: commInitResp.CommId}); err != nil {
+//         t.Fatalf("GroupStart failed: %v", err)
+//     }
+
+//     // Execute AllReduce
+//     allReduceResp, err := client.AllReduceRing(ctx, &pb.AllReduceRingRequest{
+//         CommId:   commInitResp.CommId,
+//         Count:    totalBytes,
+//         Op:       pb.ReduceOp_SUM,
+//         MemAddrs: memAddrs,
+//     })
+//     if err != nil {
+//         t.Fatalf("AllReduce failed: %v", err)
+//     }
+//     if !allReduceResp.Success {
+//         t.Fatal("AllReduce reported failure")
+//     }
+
+//     // End group operation
+//     if _, err := client.GroupEnd(ctx, &pb.GroupEndRequest{CommId: commInitResp.CommId}); err != nil {
+//         t.Fatalf("GroupEnd failed: %v", err)
+//     }
+
+//     // Wait for operation to complete
+//     time.Sleep(100 * time.Millisecond)
+
+//     // Copy result back from GPU 0 and verify
+//     resp, err := client.Memcpy(ctx, &pb.MemcpyRequest{
+//         Either: &pb.MemcpyRequest_DeviceToHost{
+//             DeviceToHost: &pb.MemcpyDeviceToHostRequest{
+//                 SrcDeviceId: commInitResp.Devices[0].DeviceId,
+//                 SrcMemAddr:  commInitResp.Devices[0].MinMemAddr,
+//                 NumBytes:    totalBytes,
+//             },
+//         },
+//     })
+//     if err != nil {
+//         t.Fatalf("Failed to copy result from GPU: %v", err)
+//     }
+
+//     // Convert result back to float64 slice and verify
+//     result := make([]float64, vectorSize)
+//     data := resp.GetDeviceToHost().DstData
+    
+//     // Print the raw bytes for debugging
+//     // t.Logf("Raw result bytes: %v", data)
+    
+//     for i := range result {
+//         result[i] = math.Float64frombits(binary.LittleEndian.Uint64(data[i*8:]))
+//         // Expected sum should be 1 + 2 + 3 + 4 = 10
+//         if math.Abs(result[i]-10.0) > 1e-10 {
+//             t.Errorf("Result[%d] = %f, want 10.0", i, result[i])
+//         }
+//     }
+// }
+
 func TestCompleteWorkflow(t *testing.T) {
     client, _, cleanup := setupTest(t)
     defer cleanup()
@@ -790,8 +897,8 @@ func TestCompleteWorkflow(t *testing.T) {
     ctx := context.Background()
 
     // Setup parameters
-    N := 4          // number of GPUs
-    vectorSize := 8 // elements per vector - MUST be divisible by number of GPUs
+    N := 16          // number of GPUs
+    vectorSize := 8192 // elements per vector - MUST be divisible by number of GPUs
     bytesPerFloat := 8
     totalBytes := uint64(vectorSize * bytesPerFloat)
 
@@ -807,12 +914,10 @@ func TestCompleteWorkflow(t *testing.T) {
         data := make([]byte, totalBytes)
         value := float64(deviceRank + 1)
         
-        // Fill entire vector with this value
         for i := 0; i < vectorSize; i++ {
             binary.LittleEndian.PutUint64(data[i*8:], math.Float64bits(value))
         }
 
-        // Copy to GPU
         _, err := client.Memcpy(ctx, &pb.MemcpyRequest{
             Either: &pb.MemcpyRequest_HostToDevice{
                 HostToDevice: &pb.MemcpyHostToDeviceRequest{
@@ -834,11 +939,12 @@ func TestCompleteWorkflow(t *testing.T) {
     }
 
     // Start group operation
-    if _, err := client.GroupStart(ctx, &pb.GroupStartRequest{CommId: commInitResp.CommId}); err != nil {
-        t.Fatalf("GroupStart failed: %v", err)
-    }
+    // if _, err := client.GroupStart(ctx, &pb.GroupStartRequest{CommId: commInitResp.CommId}); err != nil {
+    //     t.Fatalf("GroupStart failed: %v", err)
+    // }
 
-    // Execute AllReduce
+    // Measure runtime for RingAllReduce
+    start := time.Now()
     allReduceResp, err := client.AllReduceRing(ctx, &pb.AllReduceRingRequest{
         CommId:   commInitResp.CommId,
         Count:    totalBytes,
@@ -851,44 +957,115 @@ func TestCompleteWorkflow(t *testing.T) {
     if !allReduceResp.Success {
         t.Fatal("AllReduce reported failure")
     }
+    duration := time.Since(start)
+    t.Logf("RingAllReduce runtime: %v", duration)
 
     // End group operation
-    if _, err := client.GroupEnd(ctx, &pb.GroupEndRequest{CommId: commInitResp.CommId}); err != nil {
-        t.Fatalf("GroupEnd failed: %v", err)
-    }
+    // if _, err := client.GroupEnd(ctx, &pb.GroupEndRequest{CommId: commInitResp.CommId}); err != nil {
+    //     t.Fatalf("GroupEnd failed: %v", err)
+    // }
 
-    // Wait for operation to complete
-    time.Sleep(100 * time.Millisecond)
-
-    // Copy result back from GPU 0 and verify
-    resp, err := client.Memcpy(ctx, &pb.MemcpyRequest{
-        Either: &pb.MemcpyRequest_DeviceToHost{
-            DeviceToHost: &pb.MemcpyDeviceToHostRequest{
-                SrcDeviceId: commInitResp.Devices[0].DeviceId,
-                SrcMemAddr:  commInitResp.Devices[0].MinMemAddr,
-                NumBytes:    totalBytes,
-            },
-        },
-    })
-    if err != nil {
-        t.Fatalf("Failed to copy result from GPU: %v", err)
-    }
-
-    // Convert result back to float64 slice and verify
-    result := make([]float64, vectorSize)
-    data := resp.GetDeviceToHost().DstData
-    
-    // Print the raw bytes for debugging
-    // t.Logf("Raw result bytes: %v", data)
-    
-    for i := range result {
-        result[i] = math.Float64frombits(binary.LittleEndian.Uint64(data[i*8:]))
-        // Expected sum should be 1 + 2 + 3 + 4 = 10
-        if math.Abs(result[i]-10.0) > 1e-10 {
-            t.Errorf("Result[%d] = %f, want 10.0", i, result[i])
-        }
-    }
+    // Verify results using shared function
+    expectedSum := 136.0 // Expected sum: 1 + 2 + 3 + 4 = 10
+    verifyAllReduceResults(t, client, commInitResp, N, vectorSize, expectedSum)
 }
+
+
+// func TestNaiveAllReduce(t *testing.T) {
+//     client, _, cleanup := setupTest(t)
+//     defer cleanup()
+
+//     ctx := context.Background()
+
+//     // Setup parameters
+//     N := 4          // number of GPUs
+//     vectorSize := 8 // must be divisible by number of GPUs
+//     bytesPerFloat := 8
+//     totalBytes := uint64(vectorSize * bytesPerFloat)
+
+//     // Initialize communicator
+//     commInitResp, err := client.CommInit(ctx, &pb.CommInitRequest{NumDevices: uint32(N)})
+//     if err != nil {
+//         t.Fatalf("CommInit failed: %v", err)
+//     }
+
+//     // Initialize each device with its rank+1 as values
+//     for deviceRank := 0; deviceRank < N; deviceRank++ {
+//         data := make([]byte, totalBytes)
+//         value := float64(deviceRank + 1)
+        
+//         for i := 0; i < vectorSize; i++ {
+//             binary.LittleEndian.PutUint64(data[i*8:], math.Float64bits(value))
+//         }
+
+//         t.Logf("Initializing device %d with value %f", deviceRank, value)
+        
+//         _, err := client.Memcpy(ctx, &pb.MemcpyRequest{
+//             Either: &pb.MemcpyRequest_HostToDevice{
+//                 HostToDevice: &pb.MemcpyHostToDeviceRequest{
+//                     HostSrcData: data,
+//                     DstDeviceId: commInitResp.Devices[deviceRank].DeviceId,
+//                     DstMemAddr:  commInitResp.Devices[deviceRank].MinMemAddr,
+//                 },
+//             },
+//         })
+//         if err != nil {
+//             t.Fatalf("Failed to copy data to GPU %d: %v", deviceRank, err)
+//         }
+//     }
+
+//     // Setup memory addresses
+//     memAddrs := make(map[uint32]*pb.MemAddr)
+//     for i := uint32(0); i < uint32(N); i++ {
+//         memAddrs[i] = commInitResp.Devices[i].MinMemAddr
+//     }
+
+//     // Execute NaiveAllReduce
+//     allReduceResp, err := client.NaiveAllReduce(ctx, &pb.NaiveAllReduceRequest{
+//         CommId:   commInitResp.CommId,
+//         Count:    totalBytes,
+//         Op:       pb.ReduceOp_SUM,
+//         MemAddrs: memAddrs,
+//     })
+//     if err != nil {
+//         t.Fatalf("NaiveAllReduce failed: %v", err)
+//     }
+//     if !allReduceResp.Success {
+//         t.Fatal("NaiveAllReduce reported failure")
+//     }
+
+    
+//      // Wait for operation to complete
+//     time.Sleep(100 * time.Millisecond)
+
+//     // Verify results from all devices
+//     expectedSum := 10.0 // 1 + 2 + 3 + 4
+//     for deviceRank := 0; deviceRank < N; deviceRank++ {
+//         resp, err := client.Memcpy(ctx, &pb.MemcpyRequest{
+//             Either: &pb.MemcpyRequest_DeviceToHost{
+//                 DeviceToHost: &pb.MemcpyDeviceToHostRequest{
+//                     SrcDeviceId: commInitResp.Devices[deviceRank].DeviceId,
+//                     SrcMemAddr:  commInitResp.Devices[deviceRank].MinMemAddr,
+//                     NumBytes:    totalBytes,
+//                 },
+//             },
+//         })
+//         if err != nil {
+//             t.Fatalf("Failed to copy result from GPU %d: %v", deviceRank, err)
+//         }
+
+//         result := make([]float64, vectorSize)
+//         for i := range result {
+//             result[i] = math.Float64frombits(binary.LittleEndian.Uint64(
+//                 resp.GetDeviceToHost().DstData[i*8:]))
+//             if math.Abs(result[i]-expectedSum) > 1e-10 {
+//                 t.Errorf("Device %d, Result[%d] = %f, want %f", 
+//                     deviceRank, i, result[i], expectedSum)
+//             }
+//         }
+//         t.Logf("Device %d results verified", deviceRank)
+//     }
+// }
 
 func TestNaiveAllReduce(t *testing.T) {
     client, _, cleanup := setupTest(t)
@@ -897,8 +1074,8 @@ func TestNaiveAllReduce(t *testing.T) {
     ctx := context.Background()
 
     // Setup parameters
-    N := 4          // number of GPUs
-    vectorSize := 8 // must be divisible by number of GPUs
+    N := 16          // number of GPUs
+    vectorSize := 8192 // must be divisible by number of GPUs
     bytesPerFloat := 8
     totalBytes := uint64(vectorSize * bytesPerFloat)
 
@@ -912,13 +1089,11 @@ func TestNaiveAllReduce(t *testing.T) {
     for deviceRank := 0; deviceRank < N; deviceRank++ {
         data := make([]byte, totalBytes)
         value := float64(deviceRank + 1)
-        
+
         for i := 0; i < vectorSize; i++ {
             binary.LittleEndian.PutUint64(data[i*8:], math.Float64bits(value))
         }
 
-        t.Logf("Initializing device %d with value %f", deviceRank, value)
-        
         _, err := client.Memcpy(ctx, &pb.MemcpyRequest{
             Either: &pb.MemcpyRequest_HostToDevice{
                 HostToDevice: &pb.MemcpyHostToDeviceRequest{
@@ -939,7 +1114,8 @@ func TestNaiveAllReduce(t *testing.T) {
         memAddrs[i] = commInitResp.Devices[i].MinMemAddr
     }
 
-    // Execute NaiveAllReduce
+    // Measure runtime for NaiveAllReduce
+    start := time.Now()
     allReduceResp, err := client.NaiveAllReduce(ctx, &pb.NaiveAllReduceRequest{
         CommId:   commInitResp.CommId,
         Count:    totalBytes,
@@ -952,15 +1128,23 @@ func TestNaiveAllReduce(t *testing.T) {
     if !allReduceResp.Success {
         t.Fatal("NaiveAllReduce reported failure")
     }
+    duration := time.Since(start)
+    t.Logf("NaiveAllReduce runtime: %v", duration)
 
-    // Verify results from all devices
-    expectedSum := 10.0 // 1 + 2 + 3 + 4
+    // Verify results
+    expectedSum := 136.0
+    verifyAllReduceResults(t, client, commInitResp, N, vectorSize, expectedSum)
+}
+
+func verifyAllReduceResults(t *testing.T, client pb.GPUCoordinatorClient, commResp *pb.CommInitResponse, N, vectorSize int, expectedSum float64) {
+    totalBytes := uint64(vectorSize * 8) // 8 bytes per float64
+
     for deviceRank := 0; deviceRank < N; deviceRank++ {
-        resp, err := client.Memcpy(ctx, &pb.MemcpyRequest{
+        resp, err := client.Memcpy(context.Background(), &pb.MemcpyRequest{
             Either: &pb.MemcpyRequest_DeviceToHost{
                 DeviceToHost: &pb.MemcpyDeviceToHostRequest{
-                    SrcDeviceId: commInitResp.Devices[deviceRank].DeviceId,
-                    SrcMemAddr:  commInitResp.Devices[deviceRank].MinMemAddr,
+                    SrcDeviceId: commResp.Devices[deviceRank].DeviceId,
+                    SrcMemAddr:  commResp.Devices[deviceRank].MinMemAddr,
                     NumBytes:    totalBytes,
                 },
             },
@@ -974,7 +1158,7 @@ func TestNaiveAllReduce(t *testing.T) {
             result[i] = math.Float64frombits(binary.LittleEndian.Uint64(
                 resp.GetDeviceToHost().DstData[i*8:]))
             if math.Abs(result[i]-expectedSum) > 1e-10 {
-                t.Errorf("Device %d, Result[%d] = %f, want %f", 
+                t.Errorf("Device %d, Result[%d] = %f, want %f",
                     deviceRank, i, result[i], expectedSum)
             }
         }
