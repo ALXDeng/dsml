@@ -1,0 +1,26 @@
+=== RUN   TestSimpleAllReduceWithFailure
+2024/12/17 20:43:58 Initial value for device 0: 1.000000
+2024/12/17 20:43:58 Initial value for device 1: 2.000000
+2024/12/17 20:43:58 Initial value for device 2: 3.000000
+2024/12/17 20:43:58 Initial values:
+2024/12/17 20:43:58 Device 0 value: 1.000000
+2024/12/17 20:43:58 Device 0 is active
+2024/12/17 20:43:58 Device 1 value: 2.000000
+2024/12/17 20:43:58 Device 1 is failed
+2024/12/17 20:43:58 Device 2 value: 3.000000
+2024/12/17 20:43:58 Device 2 is active
+2024/12/17 20:43:58 Active ranks: [0 2]
+2024/12/17 20:43:58 After scatter-reduce:
+2024/12/17 20:43:58 Device 0 value: 0.000000
+2024/12/17 20:43:58 Device 2 value: 3.000000
+2024/12/17 20:43:58 Final values:
+2024/12/17 20:43:58 Device 0 value: 0.000000
+2024/12/17 20:43:58 Device 2 value: 0.000000
+2024/12/17 20:43:58 Device 0 final value: 0.000000 (expected 4.000000)
+    gpu_test.go:966: Device 0: Got result 0.000000, want 4.000000
+2024/12/17 20:43:58 Device 2 final value: 0.000000 (expected 4.000000)
+    gpu_test.go:966: Device 2: Got result 0.000000, want 4.000000
+--- FAIL: TestSimpleAllReduceWithFailure (0.01s)
+FAIL
+FAIL	dsml/pkg/tests	0.015s
+FAIL
