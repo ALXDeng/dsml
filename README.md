@@ -7,23 +7,30 @@
 # Running the Project 
 
 **Installing necessary dependencies:**
-
+```
 go mod tidy
+```
 
 **Starting Services:**
 
-go run cmd/device/main.go --port 50051
-
+```
+go run cmd/device/main.go --port 50051 --rank 1
+```
+```
 go run cmd/coordinator/main.go --port 50052
+```
 
 **Testing:**
 
+```
 go test ./pkg/tests -v
+```
 
-**For multiple runs of our testing script:**
+**For Multiple Runs of Our Testing Script:**
 
+```
 ./test.sh
-
+```
 
 # Group Work
 As a suite, we all worked concurrently on this project on one laptop. We worked together to implement the RPC calls and building out the services. Then, we moved on to working on the AllReduceRing and NaiveAllReduce algorithms. Throughout the lab, we worked together to implement unit testing to ensure that our implementation was working as intended, finishing with a thorough time complexity comparison test between our two algorithms. Finally we completed the write-up.

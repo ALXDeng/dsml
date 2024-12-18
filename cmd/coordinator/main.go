@@ -1,4 +1,3 @@
-// cmd/coordinator/main.go
 package main
 
 import (
