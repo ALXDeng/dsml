@@ -6,7 +6,6 @@ import (
 	"dsml/pkg/device"
 	pb "dsml/proto/gpu_sim"
 	"fmt"
-	"log"
 	"net"
 	"sync"
 	"time"
@@ -28,22 +27,134 @@ type Communicator struct {
 // GPUCoordinator manages multiple GPU devices and coordinates their operations
 type GPUCoordinator struct {
 	pb.UnimplementedGPUCoordinatorServer
-	comms     map[uint64]*Communicator  // Map of communicator ID to Communicator
-	commLock  sync.RWMutex
-	nextCommID uint64
+	Comms     map[uint64]*Communicator  // Map of communicator ID to Communicator
+    Devices   map[uint64]*device.GPUDevice
+	CommLock  sync.RWMutex
+	NextCommID uint64
 }
 
 func NewGPUCoordinator() *GPUCoordinator {
 	return &GPUCoordinator{
-		comms:     make(map[uint64]*Communicator),
-		nextCommID: 1,
+	    Comms:     make(map[uint64]*Communicator),
+        Devices:   make(map[uint64]*device.GPUDevice),
+        CommLock:  sync.RWMutex{},
+		NextCommID: 1,
 	}
 }
 
+func (c *GPUCoordinator) NaiveAllReduce(ctx context.Context, req *pb.NaiveAllReduceRequest) (*pb.NaiveAllReduceResponse, error) {
+    c.CommLock.RLock()
+    comm, exists := c.Comms[req.CommId]
+    c.CommLock.RUnlock()
+
+    if !exists {
+        return nil, fmt.Errorf("communicator not found")
+    }
+
+    comm.status = pb.Status_IN_PROGRESS
+    numDevices := len(comm.devices)
+    dataSize := req.Count
+    
+    // log.Printf("Naive AllReduce: Gathering all data to device 0 (data size: %d bytes)", dataSize)
+    
+    // Set all devices to non-allgather phase (for reduction behavior)
+    for _, device := range c.Devices {
+        device.SetAllGatherPhase(false)
+    }
+    
+    // First gather all data to device 0
+    for srcRank := 1; srcRank < numDevices; srcRank++ {
+        // Begin send from source device
+        sendResp, err := comm.devices[srcRank].BeginSend(ctx, &pb.BeginSendRequest{
+            SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(srcRank)].Value},
+            NumBytes:    dataSize,
+            DstRank:    &pb.Rank{Value: 0},
+        })
+        if err != nil {
+            return nil, fmt.Errorf("gather send failed from rank %d: %v", srcRank, err)
+        }
+
+        // Device 0 receives and automatically reduces (adds) to existing values
+        _, err = comm.devices[0].BeginReceive(ctx, &pb.BeginReceiveRequest{
+            StreamId:     sendResp.StreamId,
+            RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[0].Value},  // Same destination address for reduction
+            NumBytes:    dataSize,
+            SrcRank:     &pb.Rank{Value: uint32(srcRank)},
+        })
+        if err != nil {
+            return nil, fmt.Errorf("gather receive failed from rank %d: %v", srcRank, err)
+        }
+
+        // Wait for transfer and reduction to complete
+        for {
+            statusResp, err := comm.devices[0].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
+                StreamId: sendResp.StreamId,
+            })
+            if err != nil {
+                return nil, fmt.Errorf("status check failed: %v", err)
+            }
+            if statusResp.Status != pb.Status_IN_PROGRESS {
+                break
+            }
+            time.Sleep(5 * time.Millisecond)
+        }
+        
+        // log.Printf("Gathered and reduced data from device %d", srcRank)
+    }
+
+    // Switch to broadcast mode (no more reduction needed)
+    for _, device := range c.Devices {
+        device.SetAllGatherPhase(true)
+    }
+
+    // log.Printf("Naive AllReduce: Broadcasting reduced result to all devices")
+    
+    // Broadcast the reduced result from device 0 to all other devices
+    for dstRank := 1; dstRank < numDevices; dstRank++ {
+        // Begin send from device 0
+        sendResp, err := comm.devices[0].BeginSend(ctx, &pb.BeginSendRequest{
+            SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[0].Value},
+            NumBytes:    dataSize,
+            DstRank:    &pb.Rank{Value: uint32(dstRank)},
+        })
+        if err != nil {
+            return nil, fmt.Errorf("broadcast send failed to rank %d: %v", dstRank, err)
+        }
+
+        // Destination device receives (no reduction, just copy)
+        _, err = comm.devices[dstRank].BeginReceive(ctx, &pb.BeginReceiveRequest{
+            StreamId:     sendResp.StreamId,
+            RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(dstRank)].Value},
+            NumBytes:    dataSize,
+            SrcRank:     &pb.Rank{Value: 0},
+        })
+        if err != nil {
+            return nil, fmt.Errorf("broadcast receive failed at rank %d: %v", dstRank, err)
+        }
+
+        // Wait for broadcast to complete
+        for {
+            statusResp, err := comm.devices[dstRank].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
+                StreamId: sendResp.StreamId,
+            })
+            if err != nil {
+                return nil, fmt.Errorf("status check failed: %v", err)
+            }
+            if statusResp.Status != pb.Status_IN_PROGRESS {
+                break
+            }
+            time.Sleep(5 *time.Millisecond)
+        }
+        
+        // log.Printf("Broadcast complete to device %d", dstRank)
+    }
+
+    comm.status = pb.Status_SUCCESS
+    return &pb.NaiveAllReduceResponse{Success: true}, nil
+}
+
 // CommInit initializes a new communicator with the specified number of devices
-
-
-func (c *GPUCoordinator) CommInit(ctx context.Context, req *pb.CommInitRequest) (*pb.CommInitResponse, error) {
+func (c *GPUCoordinator) CommInit1(ctx context.Context, req *pb.CommInitRequest) (*pb.CommInitResponse, error) {
     if req.NumDevices < 1 {
         return nil, status.Error(codes.InvalidArgument, "number of devices must be positive")
     }
@@ -51,11 +162,9 @@ func (c *GPUCoordinator) CommInit(ctx context.Context, req *pb.CommInitRequest) 
     devices := make([]pb.GPUDeviceClient, req.NumDevices)
     deviceMetas := make([]*pb.DeviceMetadata, req.NumDevices)
 
-    // Create device servers
     for i := uint32(0); i < req.NumDevices; i++ {
         deviceServer := grpc.NewServer()
-        // Pass rank to device
-        deviceImpl := device.NewGPUDevice(1024*1024, i)
+        deviceImpl := device.NewGPUDevice(1024*1024, i) // Simulated device
         pb.RegisterGPUDeviceServer(deviceServer, deviceImpl)
 
         lis, err := net.Listen("tcp", ":0")
@@ -65,11 +174,10 @@ func (c *GPUCoordinator) CommInit(ctx context.Context, req *pb.CommInitRequest) 
 
         go func(index uint32) {
             if err := deviceServer.Serve(lis); err != nil {
-                log.Printf("Device %d server failed: %v", index, err)
+                // log.Printf("Device %d server failed: %v", index, err)
             }
         }(i)
 
-        // Connect to device
         conn, err := grpc.Dial(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
         if err != nil {
             return nil, fmt.Errorf("failed to connect to device %d: %v", i, err)
@@ -77,24 +185,26 @@ func (c *GPUCoordinator) CommInit(ctx context.Context, req *pb.CommInitRequest) 
 
         devices[i] = pb.NewGPUDeviceClient(conn)
         deviceMetas[i] = &pb.DeviceMetadata{
-            DeviceId: &pb.DeviceId{Value: uint64(i)},
-            MinMemAddr: &pb.MemAddr{Value: 0},
-            MaxMemAddr: &pb.MemAddr{Value: 1024 * 1024},
+            DeviceId:    &pb.DeviceId{Value: uint64(i)},
+            MinMemAddr:  &pb.MemAddr{Value: 0},
+            MaxMemAddr:  &pb.MemAddr{Value: 1024 * 1024},
         }
+
+        // Add the device to the Devices map
+        c.Devices[uint64(i)] = deviceImpl
     }
 
-    // Create communicator
-    c.commLock.Lock()
-    commId := c.nextCommID
-    c.nextCommID++
+    c.CommLock.Lock()
+    commId := c.NextCommID
+    c.NextCommID++
     comm := &Communicator{
         id:      commId,
         devices: devices,
         status:  pb.Status_IN_PROGRESS,
         inGroup: false,
     }
-    c.comms[commId] = comm
-    c.commLock.Unlock()
+    c.Comms[commId] = comm
+    c.CommLock.Unlock()
 
     return &pb.CommInitResponse{
         Success: true,
@@ -102,11 +212,72 @@ func (c *GPUCoordinator) CommInit(ctx context.Context, req *pb.CommInitRequest) 
         Devices: deviceMetas,
     }, nil
 }
+
+func (c *GPUCoordinator) CommInit(ctx context.Context, req *pb.CommInitRequest) (*pb.CommInitResponse, error) {
+    if req.NumDevices < 1 {
+        return nil, status.Error(codes.InvalidArgument, "number of devices must be positive")
+    }
+
+    devices := make([]pb.GPUDeviceClient, req.NumDevices)
+    deviceMetas := make([]*pb.DeviceMetadata, req.NumDevices)
+
+    deviceMemory := uint64(4 * 1024 * 1024) // 4MB per device
+
+    for i := uint32(0); i < req.NumDevices; i++ {
+        deviceServer := grpc.NewServer()
+        deviceImpl := device.NewGPUDevice(deviceMemory, i)
+        pb.RegisterGPUDeviceServer(deviceServer, deviceImpl)
+
+        lis, err := net.Listen("tcp", ":0")
+        if err != nil {
+            return nil, fmt.Errorf("failed to start device %d: %v", i, err)
+        }
+
+        go func(index uint32) {
+            if err := deviceServer.Serve(lis); err != nil {
+                // log.Printf("Device %d server failed: %v", index, err)
+            }
+        }(i)
+
+        conn, err := grpc.Dial(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+        if err != nil {
+            return nil, fmt.Errorf("failed to connect to device %d: %v", i, err)
+        }
+
+        devices[i] = pb.NewGPUDeviceClient(conn)
+        deviceMetas[i] = &pb.DeviceMetadata{
+            DeviceId:    &pb.DeviceId{Value: uint64(i)},
+            MinMemAddr:  &pb.MemAddr{Value: 0},
+            MaxMemAddr:  &pb.MemAddr{Value: deviceMemory},
+        }
+
+        c.Devices[uint64(i)] = deviceImpl
+    }
+
+    c.CommLock.Lock()
+    commId := c.NextCommID
+    c.NextCommID++
+    comm := &Communicator{
+        id:      commId,
+        devices: devices,
+        status:  pb.Status_IN_PROGRESS,
+        inGroup: false,
+    }
+    c.Comms[commId] = comm
+    c.CommLock.Unlock()
+
+    return &pb.CommInitResponse{
+        Success: true,
+        CommId:  commId,
+        Devices: deviceMetas,
+    }, nil
+}
+
 // GetCommStatus returns the status of a communicator
 func (c *GPUCoordinator) GetCommStatus(ctx context.Context, req *pb.GetCommStatusRequest) (*pb.GetCommStatusResponse, error) {
-    c.commLock.RLock()
-    comm, exists := c.comms[req.CommId]
-    c.commLock.RUnlock()
+    c.CommLock.RLock()
+    comm, exists := c.Comms[req.CommId]
+    c.CommLock.RUnlock()
 
     if !exists {
         return nil, status.Errorf(codes.NotFound, "communicator not found")
@@ -119,10 +290,10 @@ func (c *GPUCoordinator) GetCommStatus(ctx context.Context, req *pb.GetCommStatu
 
 // GroupStart begins a group operation
 func (c *GPUCoordinator) GroupStart(ctx context.Context, req *pb.GroupStartRequest) (*pb.GroupStartResponse, error) {
-	c.commLock.Lock()
-	defer c.commLock.Unlock()
+	c.CommLock.Lock()
+	defer c.CommLock.Unlock()
 
-	comm, exists := c.comms[req.CommId]
+	comm, exists := c.Comms[req.CommId]
 	if !exists {
 		return nil, status.Error(codes.NotFound, "communicator not found")
 	}
@@ -137,10 +308,10 @@ func (c *GPUCoordinator) GroupStart(ctx context.Context, req *pb.GroupStartReque
 
 // GroupEnd ends a group operation
 func (c *GPUCoordinator) GroupEnd(ctx context.Context, req *pb.GroupEndRequest) (*pb.GroupEndResponse, error) {
-	c.commLock.Lock()
-	defer c.commLock.Unlock()
+	c.CommLock.Lock()
+	defer c.CommLock.Unlock()
 
-	comm, exists := c.comms[req.CommId]
+	comm, exists := c.Comms[req.CommId]
 	if !exists {
 		return nil, status.Error(codes.NotFound, "communicator not found")
 	}
@@ -154,232 +325,536 @@ func (c *GPUCoordinator) GroupEnd(ctx context.Context, req *pb.GroupEndRequest) 
 }
 
 // AllReduceRing implements the ring-allreduce algorithm
-
-func (c *GPUCoordinator) AllReduceRing(ctx context.Context, req *pb.AllReduceRingRequest) (*pb.AllReduceRingResponse, error) {
-    c.commLock.RLock()
-    comm, exists := c.comms[req.CommId]
-    c.commLock.RUnlock()
+func (c *GPUCoordinator) AllReduceRing1(ctx context.Context, req *pb.AllReduceRingRequest) (*pb.AllReduceRingResponse, error) {
+    c.CommLock.RLock()
+    comm, exists := c.Comms[req.CommId]
+    c.CommLock.RUnlock()
 
     if !exists {
         return nil, fmt.Errorf("communicator not found")
     }
 
-    // Set status to IN_PROGRESS at start
-    comm.status = pb.Status_IN_PROGRESS
+    // Set initial phase
+    for _, device := range c.Devices {
+        device.SetAllGatherPhase(false)
+    }
 
     // Execute scatter-reduce phase
     if err := c.scatterReducePhase(ctx, comm, req); err != nil {
         comm.status = pb.Status_FAILED
-        return nil, err
+        return nil, fmt.Errorf("scatter-reduce failed: %v", err)
+    }
+
+    // Switch to all-gather phase
+    for _, device := range c.Devices {
+        device.SetAllGatherPhase(true)
     }
 
     // Execute all-gather phase
     if err := c.allGatherPhase(ctx, comm, req); err != nil {
         comm.status = pb.Status_FAILED
-        return nil, err
+        return nil, fmt.Errorf("all-gather failed: %v", err)
     }
 
-    // Set status to SUCCESS when done
-    comm.status = pb.Status_SUCCESS
-
-    return &pb.AllReduceRingResponse{
-        Success: true,
-    }, nil
+    return &pb.AllReduceRingResponse{Success: true}, nil
 }
 
-// scatterReducePhase implements the scatter-reduce phase of ring-allreduce
-// func (c *GPUCoordinator) scatterReducePhase(ctx context.Context, comm *Communicator, req *pb.AllReduceRingRequest) error {
-//     if comm == nil || comm.devices == nil {
-//         return fmt.Errorf("invalid communicator")
-//     }
+func (c *GPUCoordinator) AllReduceRing(ctx context.Context, req *pb.AllReduceRingRequest) (*pb.AllReduceRingResponse, error) {
+    c.CommLock.RLock()
+    comm, exists := c.Comms[req.CommId]
+    c.CommLock.RUnlock()
 
-//     numDevices := len(comm.devices)
-//     if numDevices == 0 {
-//         return fmt.Errorf("no devices in communicator")
-//     }
+    if !exists {
+        return nil, fmt.Errorf("communicator not found")
+    }
 
-//     chunkSize := req.Count / uint64(numDevices)
+    // Set initial phase
+    for _, device := range c.Devices {
+        device.SetAllGatherPhase(false)
+    }
 
-//     for step := 0; step < numDevices-1; step++ {
-//         for rank := 0; rank < numDevices; rank++ {
-//             sendRank := rank
-//             recvRank := (rank + 1) % numDevices
+    // Execute scatter-reduce phase
+    if err := c.scatterReducePhase(ctx, comm, req); err != nil {
+        comm.status = pb.Status_FAILED
+        return nil, fmt.Errorf("scatter-reduce failed: %v", err)
+    }
 
-//             if comm.devices[sendRank] == nil || comm.devices[recvRank] == nil {
-//                 return fmt.Errorf("device connection not initialized")
-//             }
+    // Switch to all-gather phase
+    for _, device := range c.Devices {
+        device.SetAllGatherPhase(true)
+    }
 
-// 			// Calculate memory offsets for this step
-// 			sendOffset := uint64(((rank - step + numDevices) % numDevices)) * chunkSize
-// 			recvOffset := uint64(((rank - step - 1 + numDevices) % numDevices)) * chunkSize
+    // Execute all-gather phase
+    if err := c.allGatherPhase(ctx, comm, req); err != nil {
+        comm.status = pb.Status_FAILED
+        return nil, fmt.Errorf("all-gather failed: %v", err)
+    }
 
-// 			// Begin send operation
-// 			sendResp, err := comm.devices[sendRank].BeginSend(ctx, &pb.BeginSendRequest{
-// 				SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(sendRank)].Value + sendOffset},
-// 				NumBytes:    chunkSize,
-// 				DstRank:    &pb.Rank{Value: uint32(recvRank)},
-// 			})
-// 			if err != nil {
-// 				return fmt.Errorf("failed to begin send: %v", err)
-// 			}
+    return &pb.AllReduceRingResponse{Success: true}, nil
+}
 
-// 			// Begin receive operation
-// 			_, err = comm.devices[recvRank].BeginReceive(ctx, &pb.BeginReceiveRequest{
-// 				StreamId:     sendResp.StreamId,
-// 				RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(recvRank)].Value + recvOffset},
-// 				NumBytes:    chunkSize,
-// 				SrcRank:     &pb.Rank{Value: uint32(sendRank)},
-// 			})
-// 			if err != nil {
-// 				return fmt.Errorf("failed to begin receive: %v", err)
-// 			}
+func (c *GPUCoordinator) scatterReducePhase1(ctx context.Context, comm *Communicator, req *pb.AllReduceRingRequest) error {
+    numDevices := len(comm.devices)
+    chunkSize := req.Count / uint64(numDevices)
+    
+    // Create buffered error channel for the entire phase
+    errChan := make(chan error, numDevices*numDevices)
 
-// 			// Wait for completion
-// 			for {
-// 				statusResp, err := comm.devices[recvRank].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
-// 					StreamId: sendResp.StreamId,
-// 				})
-// 				if err != nil {
-// 					return fmt.Errorf("failed to get stream status: %v", err)
-// 				}
-// 				if statusResp.Status != pb.Status_IN_PROGRESS {
-// 					break
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return nil
-// }
+    // For each step of the algorithm
+    for step := 0; step < numDevices-1; step++ {
+        var wg sync.WaitGroup
+        
+        // Launch all transfers for this step in parallel
+        for rank := 0; rank < numDevices; rank++ {
+            wg.Add(1)
+            go func(rank int) {
+                defer wg.Done()
+                
+                sendRank := rank
+                recvRank := (rank + 1) % numDevices
+                chunkIndex := (rank - step + numDevices) % numDevices
+                offset := uint64(chunkIndex) * chunkSize
+
+                // Begin send operation
+                sendResp, err := comm.devices[sendRank].BeginSend(ctx, &pb.BeginSendRequest{
+                    SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(sendRank)].Value + offset},
+                    NumBytes:    chunkSize,
+                    DstRank:    &pb.Rank{Value: uint32(recvRank)},
+                })
+                if err != nil {
+                    errChan <- fmt.Errorf("send failed at step %d, rank %d: %v", step, sendRank, err)
+                    return
+                }
+
+                // Begin receive operation immediately
+                _, err = comm.devices[recvRank].BeginReceive(ctx, &pb.BeginReceiveRequest{
+                    StreamId:     sendResp.StreamId,
+                    RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(recvRank)].Value + offset},
+                    NumBytes:    chunkSize,
+                    SrcRank:     &pb.Rank{Value: uint32(sendRank)},
+                })
+                if err != nil {
+                    errChan <- fmt.Errorf("receive failed at step %d, rank %d: %v", step, recvRank, err)
+                    return
+                }
+
+                // Poll for completion with shorter timeout
+                deadline := time.After(500 * time.Millisecond)
+                ticker := time.NewTicker(time.Millisecond)
+                defer ticker.Stop()
+
+                for {
+                    select {
+                    case <-deadline:
+                        errChan <- fmt.Errorf("operation timed out at step %d, rank %d", step, rank)
+                        return
+                    case <-ticker.C:
+                        statusResp, err := comm.devices[recvRank].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
+                            StreamId: sendResp.StreamId,
+                        })
+                        if err != nil {
+                            errChan <- fmt.Errorf("status check failed: %v", err)
+                            return
+                        }
+                        if statusResp.Status != pb.Status_IN_PROGRESS {
+                            return
+                        }
+                    }
+                }
+            }(rank)
+        }
+
+        // Wait for all operations in this step
+        wg.Wait()
+    }
+
+    // Check for any errors
+    select {
+    case err := <-errChan:
+        return err
+    default:
+        return nil
+    }
+}
 
 func (c *GPUCoordinator) scatterReducePhase(ctx context.Context, comm *Communicator, req *pb.AllReduceRingRequest) error {
     numDevices := len(comm.devices)
     chunkSize := req.Count / uint64(numDevices)
 
     for step := 0; step < numDevices-1; step++ {
+        var wg sync.WaitGroup
+        errChan := make(chan error, 1) // Single error channel per step
+        
         for rank := 0; rank < numDevices; rank++ {
-            sendRank := rank
-            recvRank := (rank + 1) % numDevices
+            wg.Add(1)
+            go func(rank int) {
+                defer wg.Done()
+                
+                sendRank := rank
+                recvRank := (rank + 1) % numDevices
+                chunkIndex := (rank - step + numDevices) % numDevices
+                offset := uint64(chunkIndex) * chunkSize
 
-            // Calculate memory offsets
-            sendOffset := uint64(((rank - step + numDevices) % numDevices)) * chunkSize
-            recvOffset := uint64(((rank - step - 1 + numDevices) % numDevices)) * chunkSize
-
-            // Begin send operation
-            sendResp, err := comm.devices[sendRank].BeginSend(ctx, &pb.BeginSendRequest{
-                SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(sendRank)].Value + sendOffset},
-                NumBytes:    chunkSize,
-                DstRank:    &pb.Rank{Value: uint32(recvRank)},
-            })
-            if err != nil {
-                return fmt.Errorf("failed to begin send: %v", err)
-            }
-
-            // Add a small delay to ensure the stream is registered
-            time.Sleep(10 * time.Millisecond)
-
-            // Begin receive operation
-            _, err = comm.devices[recvRank].BeginReceive(ctx, &pb.BeginReceiveRequest{
-                StreamId:     sendResp.StreamId,
-                RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(recvRank)].Value + recvOffset},
-                NumBytes:    chunkSize,
-                SrcRank:     &pb.Rank{Value: uint32(sendRank)},
-            })
-            if err != nil {
-                return fmt.Errorf("failed to begin receive: %v", err)
-            }
-
-            // Wait for completion
-            for {
-                statusResp, err := comm.devices[recvRank].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
-                    StreamId: sendResp.StreamId,
+                // Begin send
+                sendResp, err := comm.devices[sendRank].BeginSend(ctx, &pb.BeginSendRequest{
+                    SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(sendRank)].Value + offset},
+                    NumBytes:    chunkSize,
+                    DstRank:    &pb.Rank{Value: uint32(recvRank)},
                 })
                 if err != nil {
-                    return fmt.Errorf("failed to get stream status: %v", err)
+                    select {
+                    case errChan <- err:
+                    default:
+                    }
+                    return
                 }
-                if statusResp.Status != pb.Status_IN_PROGRESS {
-                    break
+
+                // Begin receive immediately
+                _, err = comm.devices[recvRank].BeginReceive(ctx, &pb.BeginReceiveRequest{
+                    StreamId:     sendResp.StreamId,
+                    RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(recvRank)].Value + offset},
+                    NumBytes:    chunkSize,
+                    SrcRank:     &pb.Rank{Value: uint32(sendRank)},
+                })
+                if err != nil {
+                    select {
+                    case errChan <- err:
+                    default:
+                    }
+                    return
                 }
-                time.Sleep(10 * time.Millisecond)
-            }
+
+                // Efficient polling
+                ticker := time.NewTicker(100 * time.Microsecond)
+                defer ticker.Stop()
+                
+                for {
+                    select {
+                    case <-ticker.C:
+                        status, err := comm.devices[recvRank].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
+                            StreamId: sendResp.StreamId,
+                        })
+                        if err != nil {
+                            select {
+                            case errChan <- err:
+                            default:
+                            }
+                            return
+                        }
+                        if status.Status != pb.Status_IN_PROGRESS {
+                            return
+                        }
+                    case <-ctx.Done():
+                        select {
+                        case errChan <- ctx.Err():
+                        default:
+                        }
+                        return
+                    }
+                }
+            }(rank)
+        }
+
+        wg.Wait()
+        
+        select {
+        case err := <-errChan:
+            return err
+        default:
         }
     }
+
     return nil
 }
 
-// allGatherPhase implements the all-gather phase of ring-allreduce
+func (c *GPUCoordinator) allGatherPhase1(ctx context.Context, comm *Communicator, req *pb.AllReduceRingRequest) error {
+    numDevices := len(comm.devices)
+    chunkSize := req.Count / uint64(numDevices)
+
+    // Each device starts with one chunk of the final result
+    // Initially, device i has chunk (i+1)%numDevices
+    deviceChunks := make([]map[int]bool, numDevices)
+    for i := range deviceChunks {
+        deviceChunks[i] = make(map[int]bool)
+        deviceChunks[i][(i+1)%numDevices] = true
+    }
+
+    // For each step of the algorithm
+    for step := 0; step < numDevices-1; step++ {
+        var wg sync.WaitGroup
+        stepErrChan := make(chan error, numDevices)
+
+        // Launch all transfers for this step in parallel
+        for rank := 0; rank < numDevices; rank++ {
+            wg.Add(1)
+            go func(rank int) {
+                defer wg.Done()
+
+                sendRank := rank
+                recvRank := (rank + 1) % numDevices
+
+                // Get list of chunks to send
+                var chunksToSend []int
+                for chunkId := range deviceChunks[sendRank] {
+                    chunksToSend = append(chunksToSend, chunkId)
+                }
+
+                // Send each chunk this device has
+                for _, chunkId := range chunksToSend {
+                    offset := uint64(chunkId) * chunkSize
+
+                    // Begin send
+                    sendResp, err := comm.devices[sendRank].BeginSend(ctx, &pb.BeginSendRequest{
+                        SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(sendRank)].Value + offset},
+                        NumBytes:    chunkSize,
+                        DstRank:    &pb.Rank{Value: uint32(recvRank)},
+                    })
+                    if err != nil {
+                        stepErrChan <- fmt.Errorf("send failed at step %d, rank %d: %v", step, sendRank, err)
+                        return
+                    }
+
+                    // Begin receive
+                    _, err = comm.devices[recvRank].BeginReceive(ctx, &pb.BeginReceiveRequest{
+                        StreamId:     sendResp.StreamId,
+                        RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(recvRank)].Value + offset},
+                        NumBytes:    chunkSize,
+                        SrcRank:     &pb.Rank{Value: uint32(sendRank)},
+                    })
+                    if err != nil {
+                        stepErrChan <- fmt.Errorf("receive failed at step %d, rank %d: %v", step, recvRank, err)
+                        return
+                    }
+
+                    // Wait for completion
+                    deadline := time.After(500 * time.Millisecond)
+                    ticker := time.NewTicker(time.Millisecond)
+                    defer ticker.Stop()
+
+                    for {
+                        select {
+                        case <-deadline:
+                            stepErrChan <- fmt.Errorf("operation timed out at step %d, rank %d", step, rank)
+                            return
+                        case <-ticker.C:
+                            statusResp, err := comm.devices[recvRank].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
+                                StreamId: sendResp.StreamId,
+                            })
+                            if err != nil {
+                                stepErrChan <- fmt.Errorf("status check failed: %v", err)
+                                return
+                            }
+                            if statusResp.Status != pb.Status_IN_PROGRESS {
+                                // Update chunk tracking only after successful transfer
+                                deviceChunks[recvRank][chunkId] = true
+                                goto nextChunk
+                            }
+                        }
+                    }
+                nextChunk:
+                }
+            }(rank)
+        }
+
+        // Wait for all operations in this step
+        wg.Wait()
+
+        // Check for any errors in this step
+        close(stepErrChan)
+        for err := range stepErrChan {
+            if err != nil {
+                return err
+            }
+        }
+    }
+
+    // Verify that all devices have all chunks
+    for i, chunks := range deviceChunks {
+        if len(chunks) != numDevices {
+            return fmt.Errorf("device %d is missing chunks, has %d/%d chunks", i, len(chunks), numDevices)
+        }
+    }
+
+    return nil
+}
+
 func (c *GPUCoordinator) allGatherPhase(ctx context.Context, comm *Communicator, req *pb.AllReduceRingRequest) error {
-	numDevices := len(comm.devices)
-	chunkSize := req.Count / uint64(numDevices)
+    numDevices := len(comm.devices)
+    chunkSize := req.Count / uint64(numDevices)
+    
+    // Track chunks with simple slice instead of map
+    chunks := make([]bool, numDevices)
+    
+    for step := 0; step < numDevices-1; step++ {
+        var wg sync.WaitGroup
+        errChan := make(chan error, 1)
 
-	for step := 0; step < numDevices-1; step++ {
-		for rank := 0; rank < numDevices; rank++ {
-			sendRank := rank
-			recvRank := (rank + 1) % numDevices
+        for rank := 0; rank < numDevices; rank++ {
+            wg.Add(1)
+            go func(rank int) {
+                defer wg.Done()
 
-			// Calculate memory offsets for this step
-			sendOffset := uint64(((rank - step + numDevices) % numDevices)) * chunkSize
-			recvOffset := uint64(((rank - step - 1 + numDevices) % numDevices)) * chunkSize
+                sendRank := rank
+                recvRank := (rank + 1) % numDevices
+                chunkIndex := (rank - step + 1 + numDevices) % numDevices
+                offset := uint64(chunkIndex) * chunkSize
 
-			// Begin send operation
-			sendResp, err := comm.devices[sendRank].BeginSend(ctx, &pb.BeginSendRequest{
-				SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(sendRank)].Value + sendOffset},
-				NumBytes:    chunkSize,
-				DstRank:    &pb.Rank{Value: uint32(recvRank)},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to begin send: %v", err)
-			}
+                // Send chunk
+                sendResp, err := comm.devices[sendRank].BeginSend(ctx, &pb.BeginSendRequest{
+                    SendBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(sendRank)].Value + offset},
+                    NumBytes:    chunkSize,
+                    DstRank:    &pb.Rank{Value: uint32(recvRank)},
+                })
+                if err != nil {
+                    select {
+                    case errChan <- err:
+                    default:
+                    }
+                    return
+                }
 
-			// Begin receive operation
-			_, err = comm.devices[recvRank].BeginReceive(ctx, &pb.BeginReceiveRequest{
-				StreamId:     sendResp.StreamId,
-				RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(recvRank)].Value + recvOffset},
-				NumBytes:    chunkSize,
-				SrcRank:     &pb.Rank{Value: uint32(sendRank)},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to begin receive: %v", err)
-			}
+                // Receive chunk
+                _, err = comm.devices[recvRank].BeginReceive(ctx, &pb.BeginReceiveRequest{
+                    StreamId:     sendResp.StreamId,
+                    RecvBuffAddr: &pb.MemAddr{Value: req.MemAddrs[uint32(recvRank)].Value + offset},
+                    NumBytes:    chunkSize,
+                    SrcRank:     &pb.Rank{Value: uint32(sendRank)},
+                })
+                if err != nil {
+                    select {
+                    case errChan <- err:
+                    default:
+                    }
+                    return
+                }
 
-			// Wait for completion
-			for {
-				statusResp, err := comm.devices[recvRank].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
-					StreamId: sendResp.StreamId,
-				})
-				if err != nil {
-					return fmt.Errorf("failed to get stream status: %v", err)
-				}
-				if statusResp.Status != pb.Status_IN_PROGRESS {
-					break
-				}
-			}
-		}
-	}
-	return nil
+                // Efficient polling
+                ticker := time.NewTicker(100 * time.Microsecond)
+                defer ticker.Stop()
+                
+                for {
+                    select {
+                    case <-ticker.C:
+                        status, err := comm.devices[recvRank].GetStreamStatus(ctx, &pb.GetStreamStatusRequest{
+                            StreamId: sendResp.StreamId,
+                        })
+                        if err != nil {
+                            select {
+                            case errChan <- err:
+                            default:
+                            }
+                            return
+                        }
+                        if status.Status != pb.Status_IN_PROGRESS {
+                            chunks[chunkIndex] = true
+                            return
+                        }
+                    case <-ctx.Done():
+                        select {
+                        case errChan <- ctx.Err():
+                        default:
+                        }
+                        return
+                    }
+                }
+            }(rank)
+        }
+
+        wg.Wait()
+        
+        select {
+        case err := <-errChan:
+            return err
+        default:
+        }
+    }
+
+    // Verify all chunks received
+    for i, hasChunk := range chunks {
+        if !hasChunk {
+            return fmt.Errorf("missing chunk %d after all-gather phase", i)
+        }
+    }
+
+    return nil
 }
 
-// Memcpy handles memory copy operations between host and device
+func contains(slice []int, val int) bool {
+    for _, item := range slice {
+        if item == val {
+            return true
+        }
+    }
+    return false
+}
+
 func (c *GPUCoordinator) Memcpy(ctx context.Context, req *pb.MemcpyRequest) (*pb.MemcpyResponse, error) {
-	switch v := req.Either.(type) {
-	case *pb.MemcpyRequest_HostToDevice:
-		return &pb.MemcpyResponse{
-			Either: &pb.MemcpyResponse_HostToDevice{
-				HostToDevice: &pb.MemcpyHostToDeviceResponse{
-					Success: true,
-				},
-			},
-		}, nil
+    switch v := req.Either.(type) {
+    case *pb.MemcpyRequest_HostToDevice:
+        // Host-to-Device copy
+        deviceID := v.HostToDevice.DstDeviceId.Value
+        dstAddr := v.HostToDevice.DstMemAddr.Value
+        srcData := v.HostToDevice.HostSrcData
 
-	case *pb.MemcpyRequest_DeviceToHost:
-		return &pb.MemcpyResponse{
-			Either: &pb.MemcpyResponse_DeviceToHost{
-				DeviceToHost: &pb.MemcpyDeviceToHostResponse{
-					DstData: make([]byte, v.DeviceToHost.NumBytes),
-				},
-			},
-		}, nil
+        // Locate the target device
+        c.CommLock.RLock()
+        targetDevice, exists := c.Devices[deviceID]
+        c.CommLock.RUnlock()
 
-	default:
-		return nil, status.Error(codes.InvalidArgument, "invalid memcpy request type")
-	}
+        if !exists {
+            return nil, status.Errorf(codes.NotFound, "Device with ID %d not found", deviceID)
+        }
+
+        // Validate memory bounds
+        if dstAddr+uint64(len(srcData)) > targetDevice.MaxAddr {
+            return nil, status.Errorf(codes.InvalidArgument, "address out of bounds")
+        }
+
+        // Copy data
+        copy(targetDevice.Memory[dstAddr:], srcData)
+
+        return &pb.MemcpyResponse{
+            Either: &pb.MemcpyResponse_HostToDevice{
+                HostToDevice: &pb.MemcpyHostToDeviceResponse{
+                    Success: true,
+                },
+            },
+        }, nil
+
+    case *pb.MemcpyRequest_DeviceToHost:
+        // Device-to-Host copy
+        deviceID := v.DeviceToHost.SrcDeviceId.Value
+        srcAddr := v.DeviceToHost.SrcMemAddr.Value
+        numBytes := v.DeviceToHost.NumBytes
+
+        // Locate the source device
+        c.CommLock.RLock()
+        sourceDevice, exists := c.Devices[deviceID]
+        c.CommLock.RUnlock()
+
+        if !exists {
+            return nil, status.Errorf(codes.NotFound, "Device with ID %d not found", deviceID)
+        }
+
+        // Validate memory bounds
+        if srcAddr+numBytes > sourceDevice.MaxAddr {
+            return nil, status.Errorf(codes.InvalidArgument, "address out of bounds")
+        }
+
+        // Copy data
+        dstData := make([]byte, numBytes)
+        copy(dstData, sourceDevice.Memory[srcAddr:srcAddr+numBytes])
+
+        return &pb.MemcpyResponse{
+            Either: &pb.MemcpyResponse_DeviceToHost{
+                DeviceToHost: &pb.MemcpyDeviceToHostResponse{
+                    DstData: dstData,
+                },
+            },
+        }, nil
+
+    default:
+        return nil, status.Errorf(codes.InvalidArgument, "Invalid memcpy request type")
+    }
 }
+

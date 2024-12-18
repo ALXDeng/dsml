@@ -283,12 +283,13 @@ var GPUDevice_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	GPUCoordinator_CommInit_FullMethodName      = "/gpu_sim.GPUCoordinator/CommInit"
-	GPUCoordinator_GetCommStatus_FullMethodName = "/gpu_sim.GPUCoordinator/GetCommStatus"
-	GPUCoordinator_GroupStart_FullMethodName    = "/gpu_sim.GPUCoordinator/GroupStart"
-	GPUCoordinator_GroupEnd_FullMethodName      = "/gpu_sim.GPUCoordinator/GroupEnd"
-	GPUCoordinator_AllReduceRing_FullMethodName = "/gpu_sim.GPUCoordinator/AllReduceRing"
-	GPUCoordinator_Memcpy_FullMethodName        = "/gpu_sim.GPUCoordinator/Memcpy"
+	GPUCoordinator_CommInit_FullMethodName       = "/gpu_sim.GPUCoordinator/CommInit"
+	GPUCoordinator_GetCommStatus_FullMethodName  = "/gpu_sim.GPUCoordinator/GetCommStatus"
+	GPUCoordinator_GroupStart_FullMethodName     = "/gpu_sim.GPUCoordinator/GroupStart"
+	GPUCoordinator_GroupEnd_FullMethodName       = "/gpu_sim.GPUCoordinator/GroupEnd"
+	GPUCoordinator_AllReduceRing_FullMethodName  = "/gpu_sim.GPUCoordinator/AllReduceRing"
+	GPUCoordinator_Memcpy_FullMethodName         = "/gpu_sim.GPUCoordinator/Memcpy"
+	GPUCoordinator_NaiveAllReduce_FullMethodName = "/gpu_sim.GPUCoordinator/NaiveAllReduce"
 )
 
 // GPUCoordinatorClient is the client API for GPUCoordinator service.
@@ -307,6 +308,7 @@ type GPUCoordinatorClient interface {
 	// Host-to-device data transfer and vice versa
 	// You may implement this as streaming as well
 	Memcpy(ctx context.Context, in *MemcpyRequest, opts ...grpc.CallOption) (*MemcpyResponse, error)
+	NaiveAllReduce(ctx context.Context, in *NaiveAllReduceRequest, opts ...grpc.CallOption) (*NaiveAllReduceResponse, error)
 }
 
 type gPUCoordinatorClient struct {
@@ -377,6 +379,16 @@ func (c *gPUCoordinatorClient) Memcpy(ctx context.Context, in *MemcpyRequest, op
 	return out, nil
 }
 
+func (c *gPUCoordinatorClient) NaiveAllReduce(ctx context.Context, in *NaiveAllReduceRequest, opts ...grpc.CallOption) (*NaiveAllReduceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NaiveAllReduceResponse)
+	err := c.cc.Invoke(ctx, GPUCoordinator_NaiveAllReduce_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GPUCoordinatorServer is the server API for GPUCoordinator service.
 // All implementations must embed UnimplementedGPUCoordinatorServer
 // for forward compatibility.
@@ -393,6 +405,7 @@ type GPUCoordinatorServer interface {
 	// Host-to-device data transfer and vice versa
 	// You may implement this as streaming as well
 	Memcpy(context.Context, *MemcpyRequest) (*MemcpyResponse, error)
+	NaiveAllReduce(context.Context, *NaiveAllReduceRequest) (*NaiveAllReduceResponse, error)
 	mustEmbedUnimplementedGPUCoordinatorServer()
 }
 
@@ -420,6 +433,9 @@ func (UnimplementedGPUCoordinatorServer) AllReduceRing(context.Context, *AllRedu
 }
 func (UnimplementedGPUCoordinatorServer) Memcpy(context.Context, *MemcpyRequest) (*MemcpyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Memcpy not implemented")
+}
+func (UnimplementedGPUCoordinatorServer) NaiveAllReduce(context.Context, *NaiveAllReduceRequest) (*NaiveAllReduceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NaiveAllReduce not implemented")
 }
 func (UnimplementedGPUCoordinatorServer) mustEmbedUnimplementedGPUCoordinatorServer() {}
 func (UnimplementedGPUCoordinatorServer) testEmbeddedByValue()                        {}
@@ -550,6 +566,24 @@ func _GPUCoordinator_Memcpy_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GPUCoordinator_NaiveAllReduce_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NaiveAllReduceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GPUCoordinatorServer).NaiveAllReduce(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GPUCoordinator_NaiveAllReduce_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GPUCoordinatorServer).NaiveAllReduce(ctx, req.(*NaiveAllReduceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GPUCoordinator_ServiceDesc is the grpc.ServiceDesc for GPUCoordinator service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -580,6 +614,10 @@ var GPUCoordinator_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Memcpy",
 			Handler:    _GPUCoordinator_Memcpy_Handler,
+		},
+		{
+			MethodName: "NaiveAllReduce",
+			Handler:    _GPUCoordinator_NaiveAllReduce_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
