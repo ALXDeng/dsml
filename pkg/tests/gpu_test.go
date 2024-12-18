@@ -850,7 +850,7 @@ func TestStatusChecking(t *testing.T) {
 //     }
 // }
 
-func TestCompleteWorkflow(t *testing.T) {
+func TestAllReduceRing(t *testing.T) {
     client, _, cleanup := setupTest(t)
     defer cleanup()
 
