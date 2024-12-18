@@ -152,6 +152,7 @@ func (c *GPUCoordinator) NaiveAllReduce(ctx context.Context, req *pb.NaiveAllRed
     comm.status = pb.Status_SUCCESS
     return &pb.NaiveAllReduceResponse{Success: true}, nil
 }
+
 // CommInit initializes a new communicator with the specified number of devices
 func (c *GPUCoordinator) CommInit1(ctx context.Context, req *pb.CommInitRequest) (*pb.CommInitResponse, error) {
     if req.NumDevices < 1 {
@@ -272,7 +273,6 @@ func (c *GPUCoordinator) CommInit(ctx context.Context, req *pb.CommInitRequest) 
     }, nil
 }
 
-
 // GetCommStatus returns the status of a communicator
 func (c *GPUCoordinator) GetCommStatus(ctx context.Context, req *pb.GetCommStatusRequest) (*pb.GetCommStatusResponse, error) {
     c.CommLock.RLock()
@@ -325,8 +325,6 @@ func (c *GPUCoordinator) GroupEnd(ctx context.Context, req *pb.GroupEndRequest) 
 }
 
 // AllReduceRing implements the ring-allreduce algorithm
-
-
 func (c *GPUCoordinator) AllReduceRing1(ctx context.Context, req *pb.AllReduceRingRequest) (*pb.AllReduceRingResponse, error) {
     c.CommLock.RLock()
     comm, exists := c.Comms[req.CommId]
@@ -360,6 +358,7 @@ func (c *GPUCoordinator) AllReduceRing1(ctx context.Context, req *pb.AllReduceRi
 
     return &pb.AllReduceRingResponse{Success: true}, nil
 }
+
 func (c *GPUCoordinator) AllReduceRing(ctx context.Context, req *pb.AllReduceRingRequest) (*pb.AllReduceRingResponse, error) {
     c.CommLock.RLock()
     comm, exists := c.Comms[req.CommId]
@@ -477,6 +476,7 @@ func (c *GPUCoordinator) scatterReducePhase1(ctx context.Context, comm *Communic
         return nil
     }
 }
+
 func (c *GPUCoordinator) scatterReducePhase(ctx context.Context, comm *Communicator, req *pb.AllReduceRingRequest) error {
     numDevices := len(comm.devices)
     chunkSize := req.Count / uint64(numDevices)
@@ -566,9 +566,6 @@ func (c *GPUCoordinator) scatterReducePhase(ctx context.Context, comm *Communica
 
     return nil
 }
-
-
-
 
 func (c *GPUCoordinator) allGatherPhase1(ctx context.Context, comm *Communicator, req *pb.AllReduceRingRequest) error {
     numDevices := len(comm.devices)
@@ -680,6 +677,7 @@ func (c *GPUCoordinator) allGatherPhase1(ctx context.Context, comm *Communicator
 
     return nil
 }
+
 func (c *GPUCoordinator) allGatherPhase(ctx context.Context, comm *Communicator, req *pb.AllReduceRingRequest) error {
     numDevices := len(comm.devices)
     chunkSize := req.Count / uint64(numDevices)
@@ -780,6 +778,7 @@ func (c *GPUCoordinator) allGatherPhase(ctx context.Context, comm *Communicator,
 
     return nil
 }
+
 func contains(slice []int, val int) bool {
     for _, item := range slice {
         if item == val {

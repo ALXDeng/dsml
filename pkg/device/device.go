@@ -21,15 +21,6 @@ var (
     globalStreamsMutex sync.RWMutex
 )
 
-// type GPUDevice struct {
-//     pb.UnimplementedGPUDeviceServer
-//     DeviceId    uint64
-//     Memory     []byte
-//     MinAddr    uint64
-//     MaxAddr    uint64
-//     Rank       uint32     // Add rank for device identification
-// }
-
 type GPUDevice struct {
     pb.UnimplementedGPUDeviceServer
     DeviceId uint64
@@ -38,12 +29,11 @@ type GPUDevice struct {
     MaxAddr  uint64
     Rank     uint32
     memLock  sync.RWMutex
-    IsAllGather bool  // New flag to track which phase we're in
+    IsAllGather bool 
 }
 func (d *GPUDevice) SetAllGatherPhase(enabled bool) {
     d.memLock.Lock()
     d.IsAllGather = enabled
-    // log.Printf("Device %d phase changed: isAllGather=%v", d.Rank, enabled)
     d.memLock.Unlock()
 }
 
@@ -58,15 +48,6 @@ type Stream struct {
     inAllGather bool  // New flag to distinguish phases
 }
 
-// func NewGPUDevice(memorySize uint64, rank uint32) *GPUDevice {
-//     return &GPUDevice{
-//         DeviceId: uint64(rank),
-//         Memory:   make([]byte, memorySize),
-//         MinAddr:  0,
-//         MaxAddr:  memorySize,
-//         Rank:     rank,
-//     }
-// }
 func NewGPUDevice(memorySize uint64, rank uint32) *GPUDevice {
     memory := make([]byte, memorySize)
     
@@ -86,7 +67,6 @@ func NewGPUDevice(memorySize uint64, rank uint32) *GPUDevice {
     }
 }
 
-
 func (d *GPUDevice) GetDeviceMetadata(ctx context.Context, req *pb.GetDeviceMetadataRequest) (*pb.GetDeviceMetadataResponse, error) {
 	return &pb.GetDeviceMetadataResponse{
 		Metadata: &pb.DeviceMetadata{
@@ -96,6 +76,7 @@ func (d *GPUDevice) GetDeviceMetadata(ctx context.Context, req *pb.GetDeviceMeta
 		},
 	}, nil
 }
+
 func (d *GPUDevice) BeginSend1(ctx context.Context, req *pb.BeginSendRequest) (*pb.BeginSendResponse, error) {
     streamId := rand.Uint64()
     
@@ -161,78 +142,6 @@ func (d *GPUDevice) BeginSend(ctx context.Context, req *pb.BeginSendRequest) (*p
         StreamId:  &pb.StreamId{Value: streamId},
     }, nil
 }
-
-
-
-// func (d *GPUDevice) BeginReceive(ctx context.Context, req *pb.BeginReceiveRequest) (*pb.BeginReceiveResponse, error) {
-//     if req.RecvBuffAddr.Value+req.NumBytes > d.MaxAddr {
-//         return nil, fmt.Errorf("receive buffer address out of bounds")
-//     }
-
-//     globalStreamsMutex.RLock()
-//     stream, exists := globalStreams[req.StreamId.Value]
-//     globalStreamsMutex.RUnlock()
-
-//     if !exists {
-//         return nil, fmt.Errorf("stream not found")
-//     }
-
-//     // Read incoming data
-//     incomingVals := make([]float64, req.NumBytes/8)
-//     for i := range incomingVals {
-//         incomingVals[i] = math.Float64frombits(binary.LittleEndian.Uint64(stream.data[i*8:]))
-//     }
-
-//     // Read existing data
-//     d.memLock.RLock()
-//     existingVals := make([]float64, req.NumBytes/8)
-//     for i := range existingVals {
-//         existingVals[i] = math.Float64frombits(binary.LittleEndian.Uint64(
-//             d.Memory[req.RecvBuffAddr.Value+uint64(i*8):]))
-//     }
-//     isAllGather := d.IsAllGather
-//     d.memLock.RUnlock()
-
-//     log.Printf("Device %d: Processing at addr=%d, isAllGather=%v incoming=%v existing=%v", 
-//         d.Rank, req.RecvBuffAddr.Value, isAllGather, incomingVals, existingVals)
-
-//     // Prepare result buffer
-//     resultVals := make([]float64, len(incomingVals))
-//     resultData := make([]byte, req.NumBytes)
-
-//     if !isAllGather {
-//         // Scatter-reduce phase: perform reduction
-//         for i := range resultVals {
-//             resultVals[i] = incomingVals[i] + existingVals[i]
-//         }
-//     } else {
-//         // All-gather phase: copy incoming values
-//         // In all-gather, incoming values are the final reduced values
-//         // for this chunk, so we just take them as-is
-//         copy(resultVals, incomingVals)
-//     }
-
-//     // Convert back to bytes
-//     for i := range resultVals {
-//         binary.LittleEndian.PutUint64(resultData[i*8:], math.Float64bits(resultVals[i]))
-//     }
-
-//     // Update device memory
-//     d.memLock.Lock()
-//     copy(d.Memory[req.RecvBuffAddr.Value:], resultData)
-//     d.memLock.Unlock()
-
-//     log.Printf("Device %d: Result values=%v at addr=%d", 
-//         d.Rank, resultVals, req.RecvBuffAddr.Value)
-
-//     globalStreamsMutex.Lock()
-//     stream.status = pb.Status_SUCCESS
-//     globalStreamsMutex.Unlock()
-
-//     return &pb.BeginReceiveResponse{
-//         Initiated: true,
-//     }, nil
-// }
 
 func (d *GPUDevice) BeginReceive(ctx context.Context, req *pb.BeginReceiveRequest) (*pb.BeginReceiveResponse, error) {
     if req.RecvBuffAddr.Value+req.NumBytes > d.MaxAddr {
@@ -302,10 +211,6 @@ func (d *GPUDevice) BeginReceive(ctx context.Context, req *pb.BeginReceiveReques
     }, nil
 }
 
-
-
-
-
 func (d *GPUDevice) BeginReceive1(ctx context.Context, req *pb.BeginReceiveRequest) (*pb.BeginReceiveResponse, error) {
     globalStreamsMutex.RLock()
     stream, exists := globalStreams[req.StreamId.Value]
@@ -370,7 +275,6 @@ func (d *GPUDevice) BeginReceive1(ctx context.Context, req *pb.BeginReceiveReque
     }, nil
 }
 
-
 func (d *GPUDevice) StreamSend(stream pb.GPUDevice_StreamSendServer) error {
 	var totalData []byte
 	
@@ -390,6 +294,7 @@ func (d *GPUDevice) StreamSend(stream pb.GPUDevice_StreamSendServer) error {
 		totalData = append(totalData, chunk.Data...)
 	}
 }
+
 func (d *GPUDevice) GetStreamStatus1(ctx context.Context, req *pb.GetStreamStatusRequest) (*pb.GetStreamStatusResponse, error) {
     globalStreamsMutex.RLock()
     stream, exists := globalStreams[req.StreamId.Value]
@@ -403,6 +308,7 @@ func (d *GPUDevice) GetStreamStatus1(ctx context.Context, req *pb.GetStreamStatu
         Status: stream.status,
     }, nil
 }
+
 func (d *GPUDevice) GetStreamStatus(ctx context.Context, req *pb.GetStreamStatusRequest) (*pb.GetStreamStatusResponse, error) {
     globalStreamsMutex.RLock()
     stream, exists := globalStreams[req.StreamId.Value]
@@ -428,8 +334,6 @@ func (d *GPUDevice) DumpMemory(start, count uint64) []float64 {
     }
     return result
 }
-
-
 
 func bytesToFloat64s(data []byte) []float64 {
     result := make([]float64, len(data)/8)
