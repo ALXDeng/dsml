@@ -1,5 +1,9 @@
 # Distributed Machine Learning
 
+**CPSC 426: Building Distributed Systems Final Project (Fall 2024)**
+
+**Alex Deng, Ryan Jin, and Jason Zheng**
+
 # Running the Project 
 
 **Installing necessary dependencies:**
