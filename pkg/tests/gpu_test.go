@@ -18,50 +18,84 @@ import (
 )
 
 // startServer starts a gRPC server on a random available port
-func startServer(t *testing.T) (string, *coordinator.GPUCoordinator, func()) {
-    // Find an available port
-    listener, err := net.Listen("tcp", ":0")
-    if err != nil {
-        t.Fatalf("Failed to listen: %v", err)
-    }
-    
-    grpcServer := grpc.NewServer()
-    coord := coordinator.NewGPUCoordinator()
-    pb.RegisterGPUCoordinatorServer(grpcServer, coord)
+// func startServer(t *testing.T) (string, *coordinator.GPUCoordinator, func()) {
+//     // Find an available port
+//     listener, err := net.Listen("tcp", ":0")
+//     if err != nil {
+//         t.Fatalf("Failed to listen: %v", err)
+//     }
 
-    // Start server in a goroutine
-    go func() {
-        if err := grpcServer.Serve(listener); err != nil {
-            log.Printf("Server exited with error: %v", err)
-        }
-    }()
+//     grpcServer := grpc.NewServer()
+//     coord := coordinator.NewGPUCoordinator()
+//     pb.RegisterGPUCoordinatorServer(grpcServer, coord)
 
-    // Get the actual address including port
-    addr := listener.Addr().String()
-    cleanup := func() {
-        grpcServer.GracefulStop()
-        listener.Close()
-    }
+//     // Start server in a goroutine
+//     go func() {
+//         if err := grpcServer.Serve(listener); err != nil {
+//             log.Printf("Server exited with error: %v", err)
+//         }
+//     }()
 
-    return addr, coord, cleanup
-}
+//     // Get the actual address including port
+//     addr := listener.Addr().String()
+//     cleanup := func() {
+//         grpcServer.GracefulStop()
+//         listener.Close()
+//     }
+
+//     return addr, coord, cleanup
+// }
+
+// func setupTest(t *testing.T) (pb.GPUCoordinatorClient, *coordinator.GPUCoordinator, func()) {
+//     // Start the server
+//     serverAddr, gpuCoordinator, serverCleanup := startServer(t)
+
+//     // Setup client options
+//     var opts []grpc.DialOption
+//     opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+//     // Create client with retry
+//     var conn *grpc.ClientConn
+//     var err error
+
+//     // Try to connect
+//     conn, err = grpc.Dial(serverAddr, opts...)
+//     if err != nil {
+//         // Retry once after 10ms
+//         time.Sleep(10 * time.Millisecond)
+//         conn, err = grpc.Dial(serverAddr, opts...)
+//         if err != nil {
+//             t.Fatalf("Failed to create client connection: %v", err)
+//         }
+//     }
+
+//     client := pb.NewGPUCoordinatorClient(conn)
+
+//     cleanup := func() {
+//         conn.Close()
+//         serverCleanup()
+//     }
+
+//     return client, gpuCoordinator, cleanup
+// }
 
 func setupTest(t *testing.T) (pb.GPUCoordinatorClient, *coordinator.GPUCoordinator, func()) {
     // Start the server
     serverAddr, gpuCoordinator, serverCleanup := startServer(t)
 
-    // Setup client options
+    // Setup client options with increased message size
     var opts []grpc.DialOption
-    opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+    opts = append(opts, 
+        grpc.WithTransportCredentials(insecure.NewCredentials()),
+        grpc.WithDefaultCallOptions(
+            grpc.MaxCallRecvMsgSize(1024*1024*1024), // 1GB
+            grpc.MaxCallSendMsgSize(1024*1024*1024), // 1GB
+        ),
+    )
 
-    // Create client with retry
-    var conn *grpc.ClientConn
-    var err error
-    
-    // Try to connect
-    conn, err = grpc.Dial(serverAddr, opts...)
+    // Create client connection
+    conn, err := grpc.Dial(serverAddr, opts...)
     if err != nil {
-        // Retry once after 10ms
         time.Sleep(10 * time.Millisecond)
         conn, err = grpc.Dial(serverAddr, opts...)
         if err != nil {
@@ -78,6 +112,39 @@ func setupTest(t *testing.T) (pb.GPUCoordinatorClient, *coordinator.GPUCoordinat
 
     return client, gpuCoordinator, cleanup
 }
+
+func startServer(t *testing.T) (string, *coordinator.GPUCoordinator, func()) {
+    // Find an available port
+    listener, err := net.Listen("tcp", ":0")
+    if err != nil {
+        t.Fatalf("Failed to listen: %v", err)
+    }
+    
+    // Create server with increased message size
+    grpcServer := grpc.NewServer(
+        grpc.MaxRecvMsgSize(1024*1024*1024), // 1GB
+        grpc.MaxSendMsgSize(1024*1024*1024), // 1GB
+    )
+    
+    coord := coordinator.NewGPUCoordinator()
+    pb.RegisterGPUCoordinatorServer(grpcServer, coord)
+
+    // Start server in a goroutine
+    go func() {
+        if err := grpcServer.Serve(listener); err != nil {
+            log.Printf("Server exited with error: %v", err)
+        }
+    }()
+
+    addr := listener.Addr().String()
+    cleanup := func() {
+        grpcServer.GracefulStop()
+        listener.Close()
+    }
+
+    return addr, coord, cleanup
+}
+
 
 // Test 1: Initialize Communicator
 func TestInitCommunicator(t *testing.T) {
@@ -917,7 +984,7 @@ func TestNaiveAllReduce(t *testing.T) {
             binary.LittleEndian.PutUint64(data[i*8:], math.Float64bits(value))
         }
 
-        t.Logf("Initializing device %d with value %f", deviceRank, value)
+        // t.Logf("Initializing device %d with value %f", deviceRank, value)
         
         _, err := client.Memcpy(ctx, &pb.MemcpyRequest{
             Either: &pb.MemcpyRequest_HostToDevice{
@@ -978,6 +1045,146 @@ func TestNaiveAllReduce(t *testing.T) {
                     deviceRank, i, result[i], expectedSum)
             }
         }
-        t.Logf("Device %d results verified", deviceRank)
+        // t.Logf("Device %d results verified", deviceRank)
+    }
+}
+func TestAllReducePerformance(t *testing.T) {
+    client, _, cleanup := setupTest(t)
+    defer cleanup()
+
+    ctx := context.Background()
+
+    // Calculate maximum safe data size (leaving some headroom in 4MB device memory)
+    maxBytesPerDevice := uint64(3.5 * 1024 * 1024) // 3.5MB to leave some headroom
+    bytesPerFloat := 8
+
+    sizes := []struct {
+        name string
+        vectorSize int
+        iterations int
+    }{
+        {"Tiny", 1000, 5},            // 8KB
+        {"Small", 10000, 5},          // 80KB
+        {"Medium", 50000, 3},         // 400KB
+        {"Large", 100000, 2},         // 800KB
+        {"XLarge", 200000, 2},        // 1.6MB
+        {"XXLarge", 450000, 1},       
+    }
+
+    numDevices := 4
+
+    for _, size := range sizes {
+        t.Run(size.name, func(t *testing.T) {
+            totalBytes := uint64(size.vectorSize * bytesPerFloat)
+            
+            // Skip if total data size would exceed device memory
+            if totalBytes > maxBytesPerDevice {
+                t.Skipf("Skipping %s size - would exceed device memory (size=%d bytes, max=%d bytes)", 
+                    size.name, totalBytes, maxBytesPerDevice)
+                return
+            }
+
+            var naiveTimes []time.Duration
+            var ringTimes []time.Duration
+
+            // Run multiple iterations for more stable measurements
+            for iter := 0; iter < size.iterations; iter++ {
+                // t.Logf("Running %s size iteration %d/%d...", size.name, iter+1, size.iterations)
+                
+                // Initialize communicator for this iteration
+                commInitResp, err := client.CommInit(ctx, &pb.CommInitRequest{NumDevices: uint32(numDevices)})
+                if err != nil {
+                    t.Fatalf("CommInit failed: %v", err)
+                }
+
+                memAddrs := make(map[uint32]*pb.MemAddr)
+                for i := uint32(0); i < uint32(numDevices); i++ {
+                    memAddrs[i] = commInitResp.Devices[i].MinMemAddr
+                }
+
+                // Setup test data
+                setupData := func() {
+                    for deviceRank := 0; deviceRank < numDevices; deviceRank++ {
+                        data := make([]byte, totalBytes)
+                        value := float64(deviceRank + 1)
+                        for i := 0; i < size.vectorSize; i++ {
+                            binary.LittleEndian.PutUint64(data[i*8:], math.Float64bits(value))
+                        }
+                        _, err := client.Memcpy(ctx, &pb.MemcpyRequest{
+                            Either: &pb.MemcpyRequest_HostToDevice{
+                                HostToDevice: &pb.MemcpyHostToDeviceRequest{
+                                    HostSrcData: data,
+                                    DstDeviceId: commInitResp.Devices[deviceRank].DeviceId,
+                                    DstMemAddr:  commInitResp.Devices[deviceRank].MinMemAddr,
+                                },
+                            },
+                        })
+                        if err != nil {
+                            t.Fatalf("Failed to copy data to GPU %d: %v", deviceRank, err)
+                        }
+                    }
+                }
+
+                // Test Naive AllReduce
+                setupData()
+                // t.Logf("Starting Naive AllReduce for size %s...", size.name)
+                start := time.Now()
+                _, err = client.NaiveAllReduce(ctx, &pb.NaiveAllReduceRequest{
+                    CommId:   commInitResp.CommId,
+                    Count:    totalBytes,
+                    Op:       pb.ReduceOp_SUM,
+                    MemAddrs: memAddrs,
+                })
+                if err != nil {
+                    t.Fatalf("NaiveAllReduce failed: %v", err)
+                }
+                naiveTime := time.Since(start)
+                naiveTimes = append(naiveTimes, naiveTime)
+                // t.Logf("Naive completed in %v", naiveTime)
+
+                // Test Ring AllReduce
+                setupData()
+                // t.Logf("Starting Ring AllReduce for size %s...", size.name)
+                start = time.Now()
+                _, err = client.GroupStart(ctx, &pb.GroupStartRequest{CommId: commInitResp.CommId})
+                if err != nil {
+                    t.Fatalf("GroupStart failed: %v", err)
+                }
+                _, err = client.AllReduceRing(ctx, &pb.AllReduceRingRequest{
+                    CommId:   commInitResp.CommId,
+                    Count:    totalBytes,
+                    Op:       pb.ReduceOp_SUM,
+                    MemAddrs: memAddrs,
+                })
+                if err != nil {
+                    t.Fatalf("AllReduceRing failed: %v", err)
+                }
+                _, err = client.GroupEnd(ctx, &pb.GroupEndRequest{CommId: commInitResp.CommId})
+                if err != nil {
+                    t.Fatalf("GroupEnd failed: %v", err)
+                }
+                ringTime := time.Since(start)
+                ringTimes = append(ringTimes, ringTime)
+                // t.Logf("Ring completed in %v", ringTime)
+
+                // Add cooldown between iterations
+                time.Sleep(100 * time.Millisecond)
+            }
+
+            // Calculate average times
+            var avgNaive, avgRing time.Duration
+            for i := 0; i < size.iterations; i++ {
+                avgNaive += naiveTimes[i]
+                avgRing += ringTimes[i]
+            }
+            avgNaive /= time.Duration(size.iterations)
+            avgRing /= time.Duration(size.iterations)
+
+            t.Logf("\nPerformance comparison for %s size (%d elements, %.2f MB), averaged over %d iterations:",
+                size.name, size.vectorSize, float64(totalBytes)/(1024*1024), size.iterations)
+            t.Logf("Naive AllReduce: %v", avgNaive)
+            t.Logf("Ring AllReduce:  %v", avgRing)
+            t.Logf("Speedup: %.2fx", float64(avgNaive)/float64(avgRing))
+        })
     }
 }

@@ -1,36 +1,1240 @@
 === RUN   TestInitCommunicator
 --- PASS: TestInitCommunicator (0.01s)
 === RUN   TestMemcpyToGPUs
---- PASS: TestMemcpyToGPUs (0.00s)
+--- PASS: TestMemcpyToGPUs (0.01s)
 === RUN   TestGroupOperations
 --- PASS: TestGroupOperations (0.00s)
 === RUN   TestAllReduce
-2024/12/16 21:53:41 Starting all-gather phase with 4 devices
---- PASS: TestAllReduce (0.17s)
+--- PASS: TestAllReduce (0.12s)
 === RUN   TestStatusChecking
 --- PASS: TestStatusChecking (0.03s)
 === RUN   TestMemcpyFromGPU
 --- PASS: TestMemcpyFromGPU (0.01s)
 === RUN   TestCompleteWorkflow
-2024/12/16 21:53:42 Starting all-gather phase with 4 devices
+--- PASS: TestCompleteWorkflow (0.11s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.03s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.189658ms
+    gpu_test.go:1186: Ring AllReduce:  7.08725ms
+    gpu_test.go:1187: Speedup: 0.45x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 6.370608ms
+    gpu_test.go:1186: Ring AllReduce:  11.422883ms
+    gpu_test.go:1187: Speedup: 0.56x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 20.767305ms
+    gpu_test.go:1186: Ring AllReduce:  14.29025ms
+    gpu_test.go:1187: Speedup: 1.45x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 31.371166ms
+    gpu_test.go:1186: Ring AllReduce:  21.987875ms
+    gpu_test.go:1187: Speedup: 1.43x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 28.137749ms
+    gpu_test.go:1186: Ring AllReduce:  16.588416ms
+    gpu_test.go:1187: Speedup: 1.70x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 91.46ms
+    gpu_test.go:1186: Ring AllReduce:  52.006542ms
+    gpu_test.go:1187: Speedup: 1.76x
+--- PASS: TestAllReducePerformance (3.12s)
+    --- PASS: TestAllReducePerformance/Tiny (0.64s)
+    --- PASS: TestAllReducePerformance/Small (0.74s)
+    --- PASS: TestAllReducePerformance/Medium (0.58s)
+    --- PASS: TestAllReducePerformance/Large (0.48s)
+    --- PASS: TestAllReducePerformance/XLarge (0.37s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.32s)
+PASS
+ok  	dsml/pkg/tests	3.507s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.00s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.03s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.01s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.14s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.07s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 4.021375ms
+    gpu_test.go:1186: Ring AllReduce:  9.401816ms
+    gpu_test.go:1187: Speedup: 0.43x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 5.528175ms
+    gpu_test.go:1186: Ring AllReduce:  9.755266ms
+    gpu_test.go:1187: Speedup: 0.57x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 23.086194ms
+    gpu_test.go:1186: Ring AllReduce:  15.943861ms
+    gpu_test.go:1187: Speedup: 1.45x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 63.323021ms
+    gpu_test.go:1186: Ring AllReduce:  37.040208ms
+    gpu_test.go:1187: Speedup: 1.71x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 51.336063ms
+    gpu_test.go:1186: Ring AllReduce:  38.667541ms
+    gpu_test.go:1187: Speedup: 1.33x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 124.228166ms
+    gpu_test.go:1186: Ring AllReduce:  59.218042ms
+    gpu_test.go:1187: Speedup: 2.10x
+--- PASS: TestAllReducePerformance (3.46s)
+    --- PASS: TestAllReducePerformance/Tiny (0.75s)
+    --- PASS: TestAllReducePerformance/Small (0.74s)
+    --- PASS: TestAllReducePerformance/Medium (0.51s)
+    --- PASS: TestAllReducePerformance/Large (0.56s)
+    --- PASS: TestAllReducePerformance/XLarge (0.48s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.42s)
+PASS
+ok  	dsml/pkg/tests	3.899s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.01s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.04s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.01s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.11s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 2.805291ms
+    gpu_test.go:1186: Ring AllReduce:  7.353641ms
+    gpu_test.go:1187: Speedup: 0.38x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 6.008ms
+    gpu_test.go:1186: Ring AllReduce:  8.538924ms
+    gpu_test.go:1187: Speedup: 0.70x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 30.969222ms
+    gpu_test.go:1186: Ring AllReduce:  18.367222ms
+    gpu_test.go:1187: Speedup: 1.69x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 44.47827ms
+    gpu_test.go:1186: Ring AllReduce:  22.147749ms
+    gpu_test.go:1187: Speedup: 2.01x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 32.73025ms
+    gpu_test.go:1186: Ring AllReduce:  23.749875ms
+    gpu_test.go:1187: Speedup: 1.38x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 106.710542ms
+    gpu_test.go:1186: Ring AllReduce:  47.416708ms
+    gpu_test.go:1187: Speedup: 2.25x
+--- PASS: TestAllReducePerformance (3.05s)
+    --- PASS: TestAllReducePerformance/Tiny (0.65s)
+    --- PASS: TestAllReducePerformance/Small (0.69s)
+    --- PASS: TestAllReducePerformance/Medium (0.55s)
+    --- PASS: TestAllReducePerformance/Large (0.43s)
+    --- PASS: TestAllReducePerformance/XLarge (0.37s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.36s)
+PASS
+ok  	dsml/pkg/tests	3.452s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.01s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.11s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.03s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.03s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.12s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.193016ms
+    gpu_test.go:1186: Ring AllReduce:  8.140166ms
+    gpu_test.go:1187: Speedup: 0.39x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 8.506049ms
+    gpu_test.go:1186: Ring AllReduce:  11.6352ms
+    gpu_test.go:1187: Speedup: 0.73x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 25.953416ms
+    gpu_test.go:1186: Ring AllReduce:  16.314528ms
+    gpu_test.go:1187: Speedup: 1.59x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 27.982729ms
+    gpu_test.go:1186: Ring AllReduce:  36.654833ms
+    gpu_test.go:1187: Speedup: 0.76x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 31.329479ms
+    gpu_test.go:1186: Ring AllReduce:  27.609ms
+    gpu_test.go:1187: Speedup: 1.13x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 114.486583ms
+    gpu_test.go:1186: Ring AllReduce:  58.149791ms
+    gpu_test.go:1187: Speedup: 1.97x
+--- PASS: TestAllReducePerformance (3.11s)
+    --- PASS: TestAllReducePerformance/Tiny (0.67s)
+    --- PASS: TestAllReducePerformance/Small (0.73s)
+    --- PASS: TestAllReducePerformance/Medium (0.55s)
+    --- PASS: TestAllReducePerformance/Large (0.42s)
+    --- PASS: TestAllReducePerformance/XLarge (0.40s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.35s)
+PASS
+ok  	dsml/pkg/tests	3.495s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.02s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.01s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.02s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.01s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.14s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 4.178541ms
+    gpu_test.go:1186: Ring AllReduce:  8.5142ms
+    gpu_test.go:1187: Speedup: 0.49x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 6.457524ms
+    gpu_test.go:1186: Ring AllReduce:  9.026041ms
+    gpu_test.go:1187: Speedup: 0.72x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 28.637458ms
+    gpu_test.go:1186: Ring AllReduce:  13.421125ms
+    gpu_test.go:1187: Speedup: 2.13x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 38.613562ms
+    gpu_test.go:1186: Ring AllReduce:  27.490146ms
+    gpu_test.go:1187: Speedup: 1.40x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 23.130958ms
+    gpu_test.go:1186: Ring AllReduce:  17.814917ms
+    gpu_test.go:1187: Speedup: 1.30x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 87.325709ms
+    gpu_test.go:1186: Ring AllReduce:  62.893167ms
+    gpu_test.go:1187: Speedup: 1.39x
+--- PASS: TestAllReducePerformance (3.08s)
+    --- PASS: TestAllReducePerformance/Tiny (0.67s)
+    --- PASS: TestAllReducePerformance/Small (0.71s)
+    --- PASS: TestAllReducePerformance/Medium (0.53s)
+    --- PASS: TestAllReducePerformance/Large (0.46s)
+    --- PASS: TestAllReducePerformance/XLarge (0.38s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.32s)
+PASS
+ok  	dsml/pkg/tests	3.463s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.00s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.02s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.02s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.13s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.02s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.411041ms
+    gpu_test.go:1186: Ring AllReduce:  7.696675ms
+    gpu_test.go:1187: Speedup: 0.44x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 7.475183ms
+    gpu_test.go:1186: Ring AllReduce:  13.999816ms
+    gpu_test.go:1187: Speedup: 0.53x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 12.552444ms
+    gpu_test.go:1186: Ring AllReduce:  18.792514ms
+    gpu_test.go:1187: Speedup: 0.67x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 47.676041ms
+    gpu_test.go:1186: Ring AllReduce:  88.523666ms
+    gpu_test.go:1187: Speedup: 0.54x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 39.147166ms
+    gpu_test.go:1186: Ring AllReduce:  25.644708ms
+    gpu_test.go:1187: Speedup: 1.53x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 81.419459ms
+    gpu_test.go:1186: Ring AllReduce:  33.461291ms
+    gpu_test.go:1187: Speedup: 2.43x
+--- PASS: TestAllReducePerformance (3.17s)
+    --- PASS: TestAllReducePerformance/Tiny (0.68s)
+    --- PASS: TestAllReducePerformance/Small (0.72s)
+    --- PASS: TestAllReducePerformance/Medium (0.49s)
+    --- PASS: TestAllReducePerformance/Large (0.58s)
+    --- PASS: TestAllReducePerformance/XLarge (0.40s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.30s)
+PASS
+ok  	dsml/pkg/tests	3.541s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.00s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.03s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.01s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.12s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.355158ms
+    gpu_test.go:1186: Ring AllReduce:  8.783091ms
+    gpu_test.go:1187: Speedup: 0.38x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 5.435083ms
+    gpu_test.go:1186: Ring AllReduce:  9.816225ms
+    gpu_test.go:1187: Speedup: 0.55x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 33.084667ms
+    gpu_test.go:1186: Ring AllReduce:  12.801653ms
+    gpu_test.go:1187: Speedup: 2.58x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 73.071667ms
+    gpu_test.go:1186: Ring AllReduce:  35.981041ms
+    gpu_test.go:1187: Speedup: 2.03x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 40.457812ms
+    gpu_test.go:1186: Ring AllReduce:  26.06027ms
+    gpu_test.go:1187: Speedup: 1.55x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 338.426542ms
+    gpu_test.go:1186: Ring AllReduce:  74.65975ms
+    gpu_test.go:1187: Speedup: 4.53x
+--- PASS: TestAllReducePerformance (3.51s)
+    --- PASS: TestAllReducePerformance/Tiny (0.67s)
+    --- PASS: TestAllReducePerformance/Small (0.68s)
+    --- PASS: TestAllReducePerformance/Medium (0.58s)
+    --- PASS: TestAllReducePerformance/Large (0.55s)
+    --- PASS: TestAllReducePerformance/XLarge (0.40s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.62s)
+PASS
+ok  	dsml/pkg/tests	3.881s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.01s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.03s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.01s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.13s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 5.027458ms
+    gpu_test.go:1186: Ring AllReduce:  7.202341ms
+    gpu_test.go:1187: Speedup: 0.70x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 10.079683ms
+    gpu_test.go:1186: Ring AllReduce:  9.582283ms
+    gpu_test.go:1187: Speedup: 1.05x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 25.334153ms
+    gpu_test.go:1186: Ring AllReduce:  20.267764ms
+    gpu_test.go:1187: Speedup: 1.25x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 43.087292ms
+    gpu_test.go:1186: Ring AllReduce:  25.661729ms
+    gpu_test.go:1187: Speedup: 1.68x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 25.387979ms
+    gpu_test.go:1186: Ring AllReduce:  17.933187ms
+    gpu_test.go:1187: Speedup: 1.42x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 58.462792ms
+    gpu_test.go:1186: Ring AllReduce:  25.816ms
+    gpu_test.go:1187: Speedup: 2.26x
+--- PASS: TestAllReducePerformance (3.02s)
+    --- PASS: TestAllReducePerformance/Tiny (0.69s)
+    --- PASS: TestAllReducePerformance/Small (0.73s)
+    --- PASS: TestAllReducePerformance/Medium (0.54s)
+    --- PASS: TestAllReducePerformance/Large (0.45s)
+    --- PASS: TestAllReducePerformance/XLarge (0.34s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.28s)
+PASS
+ok  	dsml/pkg/tests	3.386s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.00s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.03s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.01s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.12s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.024108ms
+    gpu_test.go:1186: Ring AllReduce:  7.261358ms
+    gpu_test.go:1187: Speedup: 0.42x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 6.46395ms
+    gpu_test.go:1186: Ring AllReduce:  8.538275ms
+    gpu_test.go:1187: Speedup: 0.76x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 23.667375ms
+    gpu_test.go:1186: Ring AllReduce:  16.53811ms
+    gpu_test.go:1187: Speedup: 1.43x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 40.793354ms
+    gpu_test.go:1186: Ring AllReduce:  28.494583ms
+    gpu_test.go:1187: Speedup: 1.43x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 30.152458ms
+    gpu_test.go:1186: Ring AllReduce:  28.832624ms
+    gpu_test.go:1187: Speedup: 1.05x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 111.820667ms
+    gpu_test.go:1186: Ring AllReduce:  52.826542ms
+    gpu_test.go:1187: Speedup: 2.12x
+--- PASS: TestAllReducePerformance (3.17s)
+    --- PASS: TestAllReducePerformance/Tiny (0.67s)
+    --- PASS: TestAllReducePerformance/Small (0.71s)
+    --- PASS: TestAllReducePerformance/Medium (0.59s)
+    --- PASS: TestAllReducePerformance/Large (0.44s)
+    --- PASS: TestAllReducePerformance/XLarge (0.40s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.35s)
+PASS
+ok  	dsml/pkg/tests	3.518s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.03s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.03s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.02s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.12s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.02s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.103699ms
+    gpu_test.go:1186: Ring AllReduce:  7.223066ms
+    gpu_test.go:1187: Speedup: 0.43x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 6.231875ms
+    gpu_test.go:1186: Ring AllReduce:  9.519316ms
+    gpu_test.go:1187: Speedup: 0.65x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 23.245625ms
+    gpu_test.go:1186: Ring AllReduce:  64.868194ms
+    gpu_test.go:1187: Speedup: 0.36x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 38.924312ms
+    gpu_test.go:1186: Ring AllReduce:  30.009083ms
+    gpu_test.go:1187: Speedup: 1.30x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 51.141958ms
+    gpu_test.go:1186: Ring AllReduce:  29.492354ms
+    gpu_test.go:1187: Speedup: 1.73x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 124.204542ms
+    gpu_test.go:1186: Ring AllReduce:  71.011875ms
+    gpu_test.go:1187: Speedup: 1.75x
+--- PASS: TestAllReducePerformance (3.34s)
+    --- PASS: TestAllReducePerformance/Tiny (0.71s)
+    --- PASS: TestAllReducePerformance/Small (0.72s)
+    --- PASS: TestAllReducePerformance/Medium (0.65s)
+    --- PASS: TestAllReducePerformance/Large (0.44s)
+    --- PASS: TestAllReducePerformance/XLarge (0.45s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.38s)
+PASS
+ok  	dsml/pkg/tests	3.742s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.01s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.03s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.01s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.12s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.051441ms
+    gpu_test.go:1186: Ring AllReduce:  8.637242ms
+    gpu_test.go:1187: Speedup: 0.35x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 6.678ms
+    gpu_test.go:1186: Ring AllReduce:  8.577241ms
+    gpu_test.go:1187: Speedup: 0.78x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 31.914556ms
+    gpu_test.go:1186: Ring AllReduce:  18.496208ms
+    gpu_test.go:1187: Speedup: 1.73x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 50.197167ms
+    gpu_test.go:1186: Ring AllReduce:  31.609437ms
+    gpu_test.go:1187: Speedup: 1.59x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 20.575875ms
+    gpu_test.go:1186: Ring AllReduce:  24.34925ms
+    gpu_test.go:1187: Speedup: 0.85x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 53.784792ms
+    gpu_test.go:1186: Ring AllReduce:  32.964292ms
+    gpu_test.go:1187: Speedup: 1.63x
+--- PASS: TestAllReducePerformance (3.12s)
+    --- PASS: TestAllReducePerformance/Tiny (0.66s)
+    --- PASS: TestAllReducePerformance/Small (0.73s)
+    --- PASS: TestAllReducePerformance/Medium (0.60s)
+    --- PASS: TestAllReducePerformance/Large (0.49s)
+    --- PASS: TestAllReducePerformance/XLarge (0.35s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.29s)
+PASS
+ok  	dsml/pkg/tests	3.467s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.01s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.03s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.01s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.12s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 2.368049ms
+    gpu_test.go:1186: Ring AllReduce:  8.044308ms
+    gpu_test.go:1187: Speedup: 0.29x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 4.763649ms
+    gpu_test.go:1186: Ring AllReduce:  9.343741ms
+    gpu_test.go:1187: Speedup: 0.51x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 16.758583ms
+    gpu_test.go:1186: Ring AllReduce:  15.061763ms
+    gpu_test.go:1187: Speedup: 1.11x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 45.061521ms
+    gpu_test.go:1186: Ring AllReduce:  40.079583ms
+    gpu_test.go:1187: Speedup: 1.12x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 36.905209ms
+    gpu_test.go:1186: Ring AllReduce:  38.041791ms
+    gpu_test.go:1187: Speedup: 0.97x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 68.825416ms
+    gpu_test.go:1186: Ring AllReduce:  49.678042ms
+    gpu_test.go:1187: Speedup: 1.39x
+--- PASS: TestAllReducePerformance (3.16s)
+    --- PASS: TestAllReducePerformance/Tiny (0.73s)
+    --- PASS: TestAllReducePerformance/Small (0.69s)
+    --- PASS: TestAllReducePerformance/Medium (0.50s)
+    --- PASS: TestAllReducePerformance/Large (0.49s)
+    --- PASS: TestAllReducePerformance/XLarge (0.44s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.31s)
+PASS
+ok  	dsml/pkg/tests	3.534s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.02s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.13s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.06s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.03s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.12s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.178183ms
+    gpu_test.go:1186: Ring AllReduce:  8.693774ms
+    gpu_test.go:1187: Speedup: 0.37x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 13.234816ms
+    gpu_test.go:1186: Ring AllReduce:  8.463091ms
+    gpu_test.go:1187: Speedup: 1.56x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 17.367944ms
+    gpu_test.go:1186: Ring AllReduce:  16.798194ms
+    gpu_test.go:1187: Speedup: 1.03x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 75.497666ms
+    gpu_test.go:1186: Ring AllReduce:  24.016021ms
+    gpu_test.go:1187: Speedup: 3.14x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 50.853188ms
+    gpu_test.go:1186: Ring AllReduce:  39.155437ms
+    gpu_test.go:1187: Speedup: 1.30x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 124.058792ms
+    gpu_test.go:1186: Ring AllReduce:  46.357708ms
+    gpu_test.go:1187: Speedup: 2.68x
+--- PASS: TestAllReducePerformance (3.51s)
+    --- PASS: TestAllReducePerformance/Tiny (0.69s)
+    --- PASS: TestAllReducePerformance/Small (0.75s)
+    --- PASS: TestAllReducePerformance/Medium (0.52s)
+    --- PASS: TestAllReducePerformance/Large (0.50s)
+    --- PASS: TestAllReducePerformance/XLarge (0.67s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.37s)
+PASS
+ok  	dsml/pkg/tests	3.949s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.01s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.13s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.02s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.01s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.12s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.314108ms
+    gpu_test.go:1186: Ring AllReduce:  7.569416ms
+    gpu_test.go:1187: Speedup: 0.44x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 4.84925ms
+    gpu_test.go:1186: Ring AllReduce:  8.944617ms
+    gpu_test.go:1187: Speedup: 0.54x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 24.084875ms
+    gpu_test.go:1186: Ring AllReduce:  17.666694ms
+    gpu_test.go:1187: Speedup: 1.36x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 66.305708ms
+    gpu_test.go:1186: Ring AllReduce:  40.25975ms
+    gpu_test.go:1187: Speedup: 1.65x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 30.825021ms
+    gpu_test.go:1186: Ring AllReduce:  120.054166ms
+    gpu_test.go:1187: Speedup: 0.26x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 473.471084ms
+    gpu_test.go:1186: Ring AllReduce:  164.039666ms
+    gpu_test.go:1187: Speedup: 2.89x
+--- PASS: TestAllReducePerformance (4.16s)
+    --- PASS: TestAllReducePerformance/Tiny (0.70s)
+    --- PASS: TestAllReducePerformance/Small (0.69s)
+    --- PASS: TestAllReducePerformance/Medium (0.52s)
+    --- PASS: TestAllReducePerformance/Large (0.57s)
+    --- PASS: TestAllReducePerformance/XLarge (0.60s)
+    --- PASS: TestAllReducePerformance/XXLarge (1.07s)
+PASS
+ok  	dsml/pkg/tests	4.507s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.01s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.11s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.03s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.01s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.12s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.02s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 2.198616ms
+    gpu_test.go:1186: Ring AllReduce:  9.184491ms
+    gpu_test.go:1187: Speedup: 0.24x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 6.890441ms
+    gpu_test.go:1186: Ring AllReduce:  8.994949ms
+    gpu_test.go:1187: Speedup: 0.77x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 22.784556ms
+    gpu_test.go:1186: Ring AllReduce:  15.007708ms
+    gpu_test.go:1187: Speedup: 1.52x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 28.231312ms
+    gpu_test.go:1186: Ring AllReduce:  59.155041ms
+    gpu_test.go:1187: Speedup: 0.48x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 72.404104ms
+    gpu_test.go:1186: Ring AllReduce:  32.062416ms
+    gpu_test.go:1187: Speedup: 2.26x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 136.88325ms
+    gpu_test.go:1186: Ring AllReduce:  63.779625ms
+    gpu_test.go:1187: Speedup: 2.15x
+--- PASS: TestAllReducePerformance (3.71s)
+    --- PASS: TestAllReducePerformance/Tiny (0.67s)
+    --- PASS: TestAllReducePerformance/Small (0.72s)
+    --- PASS: TestAllReducePerformance/Medium (0.50s)
+    --- PASS: TestAllReducePerformance/Large (0.87s)
+    --- PASS: TestAllReducePerformance/XLarge (0.54s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.40s)
+PASS
+ok  	dsml/pkg/tests	4.070s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.02s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.02s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.02s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.11s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 2.343833ms
+    gpu_test.go:1186: Ring AllReduce:  9.080683ms
+    gpu_test.go:1187: Speedup: 0.26x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 8.540283ms
+    gpu_test.go:1186: Ring AllReduce:  10.384483ms
+    gpu_test.go:1187: Speedup: 0.82x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 19.820236ms
+    gpu_test.go:1186: Ring AllReduce:  22.277625ms
+    gpu_test.go:1187: Speedup: 0.89x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 73.120666ms
+    gpu_test.go:1186: Ring AllReduce:  24.744479ms
+    gpu_test.go:1187: Speedup: 2.96x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 63.345166ms
+    gpu_test.go:1186: Ring AllReduce:  32.539334ms
+    gpu_test.go:1187: Speedup: 1.95x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 144.396625ms
+    gpu_test.go:1186: Ring AllReduce:  61.847083ms
+    gpu_test.go:1187: Speedup: 2.33x
+--- PASS: TestAllReducePerformance (3.48s)
+    --- PASS: TestAllReducePerformance/Tiny (0.64s)
+    --- PASS: TestAllReducePerformance/Small (0.72s)
+    --- PASS: TestAllReducePerformance/Medium (0.55s)
+    --- PASS: TestAllReducePerformance/Large (0.52s)
+    --- PASS: TestAllReducePerformance/XLarge (0.66s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.40s)
+PASS
+ok  	dsml/pkg/tests	3.854s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.01s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.13s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.03s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.02s)
+=== RUN   TestCompleteWorkflow
 --- PASS: TestCompleteWorkflow (0.16s)
 === RUN   TestNaiveAllReduce
-    gpu_test.go:920: Initializing device 0 with value 1.000000
-    gpu_test.go:920: Initializing device 1 with value 2.000000
-    gpu_test.go:920: Initializing device 2 with value 3.000000
-    gpu_test.go:920: Initializing device 3 with value 4.000000
-2024/12/16 21:53:42 Naive AllReduce: Gathering all data to device 0 (data size: 64 bytes)
-2024/12/16 21:53:42 Gathered and reduced data from device 1
-2024/12/16 21:53:42 Gathered and reduced data from device 2
-2024/12/16 21:53:42 Gathered and reduced data from device 3
-2024/12/16 21:53:42 Naive AllReduce: Broadcasting reduced result to all devices
-2024/12/16 21:53:42 Broadcast complete to device 1
-2024/12/16 21:53:42 Broadcast complete to device 2
-2024/12/16 21:53:42 Broadcast complete to device 3
-    gpu_test.go:981: Device 0 results verified
-    gpu_test.go:981: Device 1 results verified
-    gpu_test.go:981: Device 2 results verified
-    gpu_test.go:981: Device 3 results verified
---- PASS: TestNaiveAllReduce (0.01s)
+--- PASS: TestNaiveAllReduce (0.04s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.390975ms
+    gpu_test.go:1186: Ring AllReduce:  8.576225ms
+    gpu_test.go:1187: Speedup: 0.40x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 5.753391ms
+    gpu_test.go:1186: Ring AllReduce:  9.165091ms
+    gpu_test.go:1187: Speedup: 0.63x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 19.918861ms
+    gpu_test.go:1186: Ring AllReduce:  19.909972ms
+    gpu_test.go:1187: Speedup: 1.00x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 53.611375ms
+    gpu_test.go:1186: Ring AllReduce:  40.198541ms
+    gpu_test.go:1187: Speedup: 1.33x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 30.843334ms
+    gpu_test.go:1186: Ring AllReduce:  19.512417ms
+    gpu_test.go:1187: Speedup: 1.58x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 83.558042ms
+    gpu_test.go:1186: Ring AllReduce:  66.149458ms
+    gpu_test.go:1187: Speedup: 1.26x
+--- PASS: TestAllReducePerformance (3.11s)
+    --- PASS: TestAllReducePerformance/Tiny (0.68s)
+    --- PASS: TestAllReducePerformance/Small (0.69s)
+    --- PASS: TestAllReducePerformance/Medium (0.52s)
+    --- PASS: TestAllReducePerformance/Large (0.52s)
+    --- PASS: TestAllReducePerformance/XLarge (0.38s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.33s)
 PASS
-ok  	dsml/pkg/tests	0.414s
+ok  	dsml/pkg/tests	3.582s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.01s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.14s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.18s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.03s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.15s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.01s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 2.983766ms
+    gpu_test.go:1186: Ring AllReduce:  8.383066ms
+    gpu_test.go:1187: Speedup: 0.36x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 6.401191ms
+    gpu_test.go:1186: Ring AllReduce:  10.808075ms
+    gpu_test.go:1187: Speedup: 0.59x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 13.226013ms
+    gpu_test.go:1186: Ring AllReduce:  19.351805ms
+    gpu_test.go:1187: Speedup: 0.68x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 43.766396ms
+    gpu_test.go:1186: Ring AllReduce:  51.645562ms
+    gpu_test.go:1187: Speedup: 0.85x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 31.490271ms
+    gpu_test.go:1186: Ring AllReduce:  32.63075ms
+    gpu_test.go:1187: Speedup: 0.97x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 154.736125ms
+    gpu_test.go:1186: Ring AllReduce:  47.450334ms
+    gpu_test.go:1187: Speedup: 3.26x
+--- PASS: TestAllReducePerformance (3.23s)
+    --- PASS: TestAllReducePerformance/Tiny (0.67s)
+    --- PASS: TestAllReducePerformance/Small (0.72s)
+    --- PASS: TestAllReducePerformance/Medium (0.50s)
+    --- PASS: TestAllReducePerformance/Large (0.52s)
+    --- PASS: TestAllReducePerformance/XLarge (0.41s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.40s)
+PASS
+ok  	dsml/pkg/tests	3.875s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.01s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.13s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.02s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.02s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.14s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.04s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.184041ms
+    gpu_test.go:1186: Ring AllReduce:  14.189775ms
+    gpu_test.go:1187: Speedup: 0.22x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 8.305258ms
+    gpu_test.go:1186: Ring AllReduce:  7.861941ms
+    gpu_test.go:1187: Speedup: 1.06x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 24.738111ms
+    gpu_test.go:1186: Ring AllReduce:  14.143625ms
+    gpu_test.go:1187: Speedup: 1.75x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 30.915729ms
+    gpu_test.go:1186: Ring AllReduce:  21.035458ms
+    gpu_test.go:1187: Speedup: 1.47x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 35.851875ms
+    gpu_test.go:1186: Ring AllReduce:  16.587145ms
+    gpu_test.go:1187: Speedup: 2.16x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 101.1475ms
+    gpu_test.go:1186: Ring AllReduce:  72.622917ms
+    gpu_test.go:1187: Speedup: 1.39x
+--- PASS: TestAllReducePerformance (3.13s)
+    --- PASS: TestAllReducePerformance/Tiny (0.72s)
+    --- PASS: TestAllReducePerformance/Small (0.75s)
+    --- PASS: TestAllReducePerformance/Medium (0.52s)
+    --- PASS: TestAllReducePerformance/Large (0.40s)
+    --- PASS: TestAllReducePerformance/XLarge (0.39s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.35s)
+PASS
+ok  	dsml/pkg/tests	3.541s
+=== RUN   TestInitCommunicator
+--- PASS: TestInitCommunicator (0.01s)
+=== RUN   TestMemcpyToGPUs
+--- PASS: TestMemcpyToGPUs (0.00s)
+=== RUN   TestGroupOperations
+--- PASS: TestGroupOperations (0.01s)
+=== RUN   TestAllReduce
+--- PASS: TestAllReduce (0.12s)
+=== RUN   TestStatusChecking
+--- PASS: TestStatusChecking (0.03s)
+=== RUN   TestMemcpyFromGPU
+--- PASS: TestMemcpyFromGPU (0.01s)
+=== RUN   TestCompleteWorkflow
+--- PASS: TestCompleteWorkflow (0.13s)
+=== RUN   TestNaiveAllReduce
+--- PASS: TestNaiveAllReduce (0.02s)
+=== RUN   TestAllReducePerformance
+=== RUN   TestAllReducePerformance/Tiny
+    gpu_test.go:1183: 
+        Performance comparison for Tiny size (1000 elements, 0.01 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 3.336083ms
+    gpu_test.go:1186: Ring AllReduce:  6.444416ms
+    gpu_test.go:1187: Speedup: 0.52x
+=== RUN   TestAllReducePerformance/Small
+    gpu_test.go:1183: 
+        Performance comparison for Small size (10000 elements, 0.08 MB), averaged over 5 iterations:
+    gpu_test.go:1185: Naive AllReduce: 5.313075ms
+    gpu_test.go:1186: Ring AllReduce:  8.112441ms
+    gpu_test.go:1187: Speedup: 0.65x
+=== RUN   TestAllReducePerformance/Medium
+    gpu_test.go:1183: 
+        Performance comparison for Medium size (50000 elements, 0.38 MB), averaged over 3 iterations:
+    gpu_test.go:1185: Naive AllReduce: 17.628541ms
+    gpu_test.go:1186: Ring AllReduce:  21.006319ms
+    gpu_test.go:1187: Speedup: 0.84x
+=== RUN   TestAllReducePerformance/Large
+    gpu_test.go:1183: 
+        Performance comparison for Large size (100000 elements, 0.76 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 45.69152ms
+    gpu_test.go:1186: Ring AllReduce:  28.551145ms
+    gpu_test.go:1187: Speedup: 1.60x
+=== RUN   TestAllReducePerformance/XLarge
+    gpu_test.go:1183: 
+        Performance comparison for XLarge size (200000 elements, 1.53 MB), averaged over 2 iterations:
+    gpu_test.go:1185: Naive AllReduce: 28.719291ms
+    gpu_test.go:1186: Ring AllReduce:  33.072833ms
+    gpu_test.go:1187: Speedup: 0.87x
+=== RUN   TestAllReducePerformance/XXLarge
+    gpu_test.go:1183: 
+        Performance comparison for XXLarge size (450000 elements, 3.43 MB), averaged over 1 iterations:
+    gpu_test.go:1185: Naive AllReduce: 159.267584ms
+    gpu_test.go:1186: Ring AllReduce:  71.47575ms
+    gpu_test.go:1187: Speedup: 2.23x
+--- PASS: TestAllReducePerformance (3.21s)
+    --- PASS: TestAllReducePerformance/Tiny (0.65s)
+    --- PASS: TestAllReducePerformance/Small (0.68s)
+    --- PASS: TestAllReducePerformance/Medium (0.50s)
+    --- PASS: TestAllReducePerformance/Large (0.48s)
+    --- PASS: TestAllReducePerformance/XLarge (0.49s)
+    --- PASS: TestAllReducePerformance/XXLarge (0.41s)
+PASS
+ok  	dsml/pkg/tests	3.595s
